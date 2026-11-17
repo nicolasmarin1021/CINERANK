@@ -128,6 +128,7 @@ export function parseMovie(data: OmdbMovieResponse, now: number = Date.now()): M
     ratings: parseRatings(data),
     audienceChecked: false,
     providers: null,
+    trailer: null,
     fetchedAt: now,
   };
 }
@@ -145,10 +146,18 @@ export function upgradeMovie(saved: Movie): Movie {
       imdbVotes: ratings.imdbVotes ?? null,
       rt: ratings.rt ?? null,
       popcorn: ratings.popcorn ?? null,
+      // Comentarios de Trakt: se conservan si ya se habían traído.
+      ...(ratings.comments != null || ratings.commentsCount != null
+        ? { comments: ratings.comments ?? null, commentsCount: ratings.commentsCount ?? null }
+        : {}),
     },
     providers: Array.isArray(saved.providers) ? saved.providers : null,
-    // Si falta el público de RT o las plataformas (versiones anteriores), se vuelve a consultar MDBList.
-    audienceChecked: (saved.audienceChecked ?? false) && ratings.popcorn != null && Array.isArray(saved.providers),
+    // Si falta el público de RT, las plataformas o el tráiler (versiones anteriores), se vuelve a consultar MDBList.
+    audienceChecked:
+      (saved.audienceChecked ?? false) &&
+      ratings.popcorn != null &&
+      Array.isArray(saved.providers) &&
+      saved.trailer !== undefined,
   };
 }
 

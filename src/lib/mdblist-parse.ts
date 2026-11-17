@@ -19,6 +19,8 @@ export interface MdblistMediaResponse {
   ratings?: MdblistRating[];
   /** Plataformas donde verla, con IDs de TMDB. MDBList las da siempre para EE. UU. */
   watch_providers?: { id?: unknown; name?: unknown }[];
+  /** Enlace al tráiler (normalmente de YouTube) o null. */
+  trailer?: unknown;
   error?: string;
 }
 
@@ -77,6 +79,12 @@ export function parseWatchProviders(response: MdblistMediaResponse): { id: numbe
     out.push({ id: p.id, name: p.name.trim() });
   }
   return out;
+}
+
+/** Enlace al tráiler si es una URL web; si no, null. */
+export function parseTrailer(response: MdblistMediaResponse): string | null {
+  const t = typeof response.trailer === 'string' ? response.trailer.trim() : '';
+  return /^https?:\/\//i.test(t) ? t : null;
 }
 
 /** Lee la puntuación de un título en la respuesta del endpoint por lotes. */

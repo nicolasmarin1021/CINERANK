@@ -32,6 +32,7 @@ const ICONS = {
   chevronDown: { ios: 'chevron.down', android: 'expand_more', web: 'expand_more' },
   check: { ios: 'checkmark', android: 'check', web: 'check' },
   masks: { ios: 'theatermasks.fill', android: 'theater_comedy', web: 'theater_comedy' },
+  play: { ios: 'play.fill', android: 'play_arrow', web: 'play_arrow' },
   star: { ios: 'star.fill', android: 'star', web: 'star' },
   minusCircle: { ios: 'minus.circle.fill', android: 'do_not_disturb_on', web: 'do_not_disturb_on' },
 } satisfies Record<string, Extract<SymbolViewProps['name'], object>>;

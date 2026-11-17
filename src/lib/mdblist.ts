@@ -8,6 +8,7 @@ import {
   mdblistErrorKind,
   parseBatchRating,
   parseRottenScores,
+  parseTrailer,
   parseWatchProviders,
   translateMdblistError,
   type MdblistBatchResponse,
@@ -72,7 +73,7 @@ const lookup = (apiKey: string, type: MdblistMediaType, imdbID: string) =>
   call<MdblistMediaResponse>(`/imdb/${type}/${encodeURIComponent(imdbID)}`, apiKey);
 
 /** Puntajes de Rotten Tomatoes y plataformas donde verla, de una sola consulta. */
-export type MdblistInfo = RottenScores & { providers: WatchProvider[] };
+export type MdblistInfo = RottenScores & { providers: WatchProvider[]; trailer: string | null };
 
 /** Puntajes de crítica y público de Rotten Tomatoes (y plataformas) para un ID de IMDb. */
 export async function getRottenScores(
@@ -90,7 +91,11 @@ export async function getRottenScores(
     usedType = type === 'movie' ? 'show' : 'movie';
     media = await lookup(apiKey, usedType, imdbID);
   }
-  const scores: MdblistInfo = { ...parseRottenScores(media), providers: parseWatchProviders(media) };
+  const scores: MdblistInfo = {
+    ...parseRottenScores(media),
+    providers: parseWatchProviders(media),
+    trailer: parseTrailer(media),
+  };
 
   // Plan B: el endpoint por lotes pide explícitamente la fuente "audience" (público de RT).
   if (scores.popcorn == null) {

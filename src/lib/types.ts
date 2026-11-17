@@ -3,21 +3,24 @@
  * - imdb: nota de los usuarios de IMDb (0–10).
  * - rt: Tomatómetro de Rotten Tomatoes, la crítica (los "tomates").
  * - popcorn: Popcornmeter de Rotten Tomatoes, el público (las "palomitas").
+ * - comments: nota de quienes comentan en Trakt (opcional, con Client ID de Trakt).
  */
-export type SourceKey = 'imdb' | 'rt' | 'popcorn';
+export type SourceKey = 'imdb' | 'rt' | 'popcorn' | 'comments';
 
-export const SOURCE_KEYS: readonly SourceKey[] = ['imdb', 'rt', 'popcorn'];
+export const SOURCE_KEYS: readonly SourceKey[] = ['imdb', 'rt', 'popcorn', 'comments'];
 
 export const SOURCE_LABEL: Record<SourceKey, string> = {
   imdb: 'IMDb',
   rt: 'RT crítica',
   popcorn: 'RT público',
+  comments: 'Comentarios',
 };
 
 export const SOURCE_SHORT: Record<SourceKey, string> = {
   imdb: 'IMDb',
   rt: 'RT crítica',
   popcorn: 'RT público',
+  comments: 'Comentarios',
 };
 
 /** Qué representa cada fuente, para explicarlo en la interfaz. */
@@ -25,6 +28,7 @@ export const SOURCE_AUDIENCE: Record<SourceKey, string> = {
   imdb: 'Usuarios de IMDb',
   rt: 'Crítica de Rotten Tomatoes',
   popcorn: 'Público de Rotten Tomatoes',
+  comments: 'Quienes comentan en Trakt',
 };
 
 export type MediaType = 'movie' | 'series';
@@ -53,6 +57,10 @@ export interface MovieRatings {
   rt: number | null;
   /** Popcornmeter de Rotten Tomatoes, 0 a 100 (% del público que la valora bien). */
   popcorn: number | null;
+  /** Nota media (0 a 100) de quienes comentan en Trakt, ponderada por «me gusta». */
+  comments?: number | null;
+  /** Cuántos comentarios de Trakt traían nota. */
+  commentsCount?: number | null;
 }
 
 /** Plataforma donde se puede ver o alquilar (IDs de TMDB/JustWatch, vía MDBList). */
@@ -83,6 +91,10 @@ export interface Movie {
   audienceChecked: boolean;
   /** Plataformas según MDBList (disponibilidad en EE. UU.). null: aún sin consultar. */
   providers: WatchProvider[] | null;
+  /** True si ya se consultaron los comentarios de Trakt. */
+  commentsChecked?: boolean;
+  /** Enlace de YouTube al tráiler (vía MDBList). null: no hay; undefined: aún sin consultar. */
+  trailer?: string | null;
   /** Momento (ms) en que se descargaron los datos. */
   fetchedAt: number;
 }
@@ -100,4 +112,5 @@ export interface RankingSettings {
   awardsBonus: number;
 }
 
-export type SortKey = 'score' | SourceKey;
+/** 'today' = CineScore ajustado a tu plan de hoy. */
+export type SortKey = 'score' | 'today' | SourceKey;

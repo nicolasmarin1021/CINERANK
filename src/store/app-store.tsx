@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, use, useEffect, useReducer, type ReactNode } from 'react';
 
 import { keepExisting, toggleId } from '@/lib/compare';
+import { activePlan, sanitizePlan, todayKey, type Company, type Mood, type Plan, type StoredPlan } from '@/lib/plan';
 import { AWARDS_BONUS_LEVELS, DEFAULT_SETTINGS } from '@/lib/ranking';
 import { upgradeMovie } from '@/lib/omdb-parse';
 import type { ApiKeys, MediaType, Movie, RankingSettings, SortKey, Weights } from '@/lib/types';
@@ -18,6 +19,7 @@ export const MAX_CANDIDATES = 12;
 /** Claves por defecto opcionales, inyectadas en compilación (ver .env.example). */
 const ENV_API_KEY = process.env.EXPO_PUBLIC_OMDB_API_KEY ?? '';
 const ENV_MDBLIST_KEY = process.env.EXPO_PUBLIC_MDBLIST_API_KEY ?? '';
+const ENV_TRAKT_KEY = process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID ?? '';
 
 export type RuntimeFilter = 0 | 90 | 120 | 150;
 
@@ -26,10 +28,14 @@ export interface AppState {
   apiKey: string;
   /** Clave de MDBList (opcional): aporta el puntaje del público de Rotten Tomatoes. */
   mdblistKey: string;
+  /** Client ID de Trakt (opcional): aporta la nota de quienes comentan. */
+  traktKey: string;
   settings: RankingSettings;
   candidates: Movie[];
   /** Títulos de la lista elegidos para enfrentarlos en «¿Cuál es mejor?». */
   compareIds: string[];
+  /** Tu plan de hoy (ánimo y compañía). Caduca a medianoche. */
+  plan: StoredPlan | null;
   sortBy: SortKey;
   maxRuntime: RuntimeFilter;
   searchType: MediaType;
@@ -41,6 +47,8 @@ type Action =
   | { type: 'hydrate'; state: Partial<PersistedState> }
   | { type: 'setApiKey'; apiKey: string }
   | { type: 'setMdblistKey'; mdblistKey: string }
+  | { type: 'setTraktKey'; traktKey: string }
+  | { type: 'setComments'; imdbID: string; comments: number | null; count: number }
   | { type: 'setWeights'; weights: Weights }
   | { type: 'setVoteConfidence'; enabled: boolean }
   | { type: 'setMinVotes'; minVotes: number }
@@ -51,6 +59,8 @@ type Action =
   | { type: 'replaceCandidates'; movies: Movie[] }
   | { type: 'clearCandidates' }
   | { type: 'toggleCompare'; imdbID: string }
+  | { type: 'setPlan'; mood: Mood | null; company: Company | null; day: string }
+  | { type: 'clearPlan' }
   | { type: 'setSortBy'; sortBy: SortKey }
   | { type: 'setMaxRuntime'; maxRuntime: RuntimeFilter }
   | { type: 'setSearchType'; searchType: MediaType };
@@ -59,9 +69,11 @@ const initialState: AppState = {
   hydrated: false,
   apiKey: ENV_API_KEY,
   mdblistKey: ENV_MDBLIST_KEY,
+  traktKey: ENV_TRAKT_KEY,
   settings: DEFAULT_SETTINGS,
   candidates: [],
   compareIds: [],
+  plan: null,
   sortBy: 'score',
   maxRuntime: 0,
   searchType: 'movie',
@@ -79,6 +91,7 @@ function reducer(state: AppState, action: Action): AppState {
         ...saved,
         apiKey: saved.apiKey || ENV_API_KEY,
         mdblistKey: saved.mdblistKey || ENV_MDBLIST_KEY,
+        traktKey: saved.traktKey || ENV_TRAKT_KEY,
         settings: {
           ...DEFAULT_SETTINGS,
           ...saved.settings,
@@ -87,6 +100,7 @@ function reducer(state: AppState, action: Action): AppState {
             imdb: savedWeights.imdb ?? defaults.imdb,
             rt: savedWeights.rt ?? defaults.rt,
             popcorn: savedWeights.popcorn ?? defaults.popcorn,
+            comments: savedWeights.comments ?? defaults.comments,
           },
           // Versiones anteriores no tenían bonus por premios: se usa el valor por defecto.
           awardsBonus: (AWARDS_BONUS_LEVELS as readonly number[]).includes(saved.settings?.awardsBonus as number)
@@ -95,6 +109,7 @@ function reducer(state: AppState, action: Action): AppState {
         },
         candidates,
         compareIds: keepExisting(saved.compareIds, candidates),
+        plan: sanitizePlan(saved.plan),
         sortBy: isSortKey(saved.sortBy) ? saved.sortBy : 'score',
         hydrated: true,
       };
@@ -103,6 +118,21 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, apiKey: action.apiKey.trim() };
     case 'setMdblistKey':
       return { ...state, mdblistKey: action.mdblistKey.trim() };
+    case 'setTraktKey':
+      return { ...state, traktKey: action.traktKey.trim() };
+    case 'setComments':
+      return {
+        ...state,
+        candidates: state.candidates.map((m) =>
+          m.imdbID === action.imdbID
+            ? {
+                ...m,
+                ratings: { ...m.ratings, comments: action.comments, commentsCount: action.count },
+                commentsChecked: true,
+              }
+            : m,
+        ),
+      };
     case 'setWeights':
       return { ...state, settings: { ...state.settings, weights: action.weights } };
     case 'setVoteConfidence':
@@ -118,7 +148,7 @@ function reducer(state: AppState, action: Action): AppState {
       if (exists) {
         return {
           ...state,
-          candidates: state.candidates.map((m) => (m.imdbID === action.movie.imdbID ? action.movie : m)),
+          candidates: state.candidates.map((m) => (m.imdbID === action.movie.imdbID ? keepComments(action.movie, m) : m)),
         };
       }
       if (state.candidates.length >= MAX_CANDIDATES) return state;
@@ -132,10 +162,24 @@ function reducer(state: AppState, action: Action): AppState {
       };
     case 'replaceCandidates': {
       const fresh = new Map(action.movies.map((m) => [m.imdbID, m]));
-      return { ...state, candidates: state.candidates.map((m) => fresh.get(m.imdbID) ?? m) };
+      return {
+        ...state,
+        candidates: state.candidates.map((m) => {
+          const next = fresh.get(m.imdbID);
+          return next ? keepComments(next, m) : m;
+        }),
+      };
     }
     case 'clearCandidates':
       return { ...state, candidates: [], compareIds: [] };
+    case 'setPlan': {
+      const plan = action.mood || action.company ? { mood: action.mood, company: action.company, day: action.day } : null;
+      // Al elegir un plan, el ranking pasa a ordenarse «Para hoy»; al quitarlo, vuelve al CineScore.
+      const sortBy = plan && state.sortBy === 'score' ? 'today' : !plan && state.sortBy === 'today' ? 'score' : state.sortBy;
+      return { ...state, plan, sortBy };
+    }
+    case 'clearPlan':
+      return { ...state, plan: null, sortBy: state.sortBy === 'today' ? 'score' : state.sortBy };
     case 'toggleCompare':
       if (!state.candidates.some((m) => m.imdbID === action.imdbID)) return state;
       return { ...state, compareIds: toggleId(state.compareIds, action.imdbID) };
@@ -148,8 +192,25 @@ function reducer(state: AppState, action: Action): AppState {
   }
 }
 
+/**
+ * Las fichas de OMDb/MDBList no traen los comentarios de Trakt (se piden aparte):
+ * al reemplazar una ficha se conservan los que ya tenía.
+ */
+function keepComments(next: Movie, previous: Movie): Movie {
+  if (next.commentsChecked || !previous.commentsChecked) return next;
+  return {
+    ...next,
+    ratings: {
+      ...next.ratings,
+      comments: previous.ratings.comments ?? null,
+      commentsCount: previous.ratings.commentsCount ?? null,
+    },
+    commentsChecked: true,
+  };
+}
+
 function isSortKey(value: unknown): value is SortKey {
-  return value === 'score' || value === 'imdb' || value === 'rt' || value === 'popcorn';
+  return ['score', 'today', 'imdb', 'rt', 'popcorn', 'comments'].includes(value as string);
 }
 
 interface AppContextValue {
@@ -196,6 +257,12 @@ export function useApp() {
 export function useApiKeys(): ApiKeys {
   const { state } = useApp();
   return { omdb: state.apiKey, mdblist: state.mdblistKey };
+}
+
+/** Tu plan de hoy, o null si no hay o si es de otro día. */
+export function useActivePlan(): Plan | null {
+  const { state } = useApp();
+  return activePlan(state.plan, todayKey());
 }
 
 export function useIsCandidate(imdbID: string) {

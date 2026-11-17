@@ -9,16 +9,17 @@ import { SourceDot } from '@/components/scores';
 import { Palette, Radius, Spacing, TierColor } from '@/constants/theme';
 import { MDBLIST_SIGNUP_URL, testMdblistKey } from '@/lib/mdblist';
 import { OMDB_SIGNUP_URL, testApiKey } from '@/lib/omdb';
+import { TRAKT_APPS_URL, testTraktKey } from '@/lib/trakt';
 import { AWARDS_BONUS_LEVELS, weightShares, type TierKey } from '@/lib/ranking';
 import { SOURCE_AUDIENCE, SOURCE_LABEL, type SourceKey, type Weights } from '@/lib/types';
 import { useApp } from '@/store/app-store';
 
 // Los pesos se normalizan: { 50, 50, 50 } equivale a un tercio cada fuente.
 const PRESETS: { label: string; weights: Weights }[] = [
-  { label: 'Equilibrado', weights: { imdb: 50, rt: 50, popcorn: 50 } },
-  { label: 'Manda la crítica', weights: { imdb: 25, rt: 50, popcorn: 25 } },
-  { label: 'Manda el público', weights: { imdb: 40, rt: 20, popcorn: 40 } },
-  { label: 'Solo Rotten Tomatoes', weights: { imdb: 0, rt: 50, popcorn: 50 } },
+  { label: 'Equilibrado', weights: { imdb: 50, rt: 50, popcorn: 50, comments: 25 } },
+  { label: 'Manda la crítica', weights: { imdb: 25, rt: 50, popcorn: 25, comments: 10 } },
+  { label: 'Manda el público', weights: { imdb: 40, rt: 20, popcorn: 40, comments: 40 } },
+  { label: 'Solo Rotten Tomatoes', weights: { imdb: 0, rt: 50, popcorn: 50, comments: 0 } },
 ];
 
 const RIGOR = [
@@ -35,7 +36,7 @@ const TIERS: { key: TierKey; label: string; range: string }[] = [
   { key: 'avoid', label: 'Mejor evítala', range: '0 – 49' },
 ];
 
-const SOURCES: SourceKey[] = ['imdb', 'rt', 'popcorn'];
+const SOURCES: SourceKey[] = ['imdb', 'rt', 'popcorn', 'comments'];
 
 const AWARDS_LABEL: Record<(typeof AWARDS_BONUS_LEVELS)[number], string> = {
   0: 'Sin bonus',
@@ -61,6 +62,21 @@ async function testMdblist(key: string): Promise<KeyTestDetail> {
     warn: true,
     message: `La clave funciona, pero MDBList no devolvió el público de RT. Recibido: ${
       scores.sources.join(', ').slice(0, 300) || 'ninguna calificación'
+    }`,
+  };
+}
+
+async function testTrakt(key: string): Promise<KeyTestDetail> {
+  const r = await testTraktKey(key);
+  if (r.score != null) {
+    return {
+      message: `Prueba con The Shawshank Redemption: ${r.rated} comentarios con nota · ${r.score}% de media.`,
+    };
+  }
+  return {
+    warn: true,
+    message: `La clave funciona, pero de ${r.total} comentarios solo ${r.rated} traían nota. Campos recibidos: ${
+      r.fields.join(', ') || 'ninguno'
     }`,
   };
 }
@@ -105,6 +121,18 @@ export default function SettingsScreen() {
         optional
       />
 
+      <ApiKeyCard
+        title="Clave de Trakt"
+        caption="Opcional · nota de quienes comentan"
+        description="Trakt es una red de espectadores que comentan y puntúan lo que ven. En app.trakt.tv/apps («My Apps») conecta tu GitHub, crea una app gratis y ábrela: ahí verás su Client ID. Pégalo aquí (no el Client Secret)."
+        savedKey={state.traktKey}
+        signupUrl={TRAKT_APPS_URL}
+        accessibilityLabel="Client ID de Trakt"
+        test={testTrakt}
+        onSave={(traktKey) => dispatch({ type: 'setTraktKey', traktKey })}
+        optional
+      />
+
       {/* Pesos */}
       <Card style={{ gap: Spacing.four }}>
         <SectionHeader title="Peso de cada fuente" caption="Cuánto cuenta cada calificación en el CineScore" />
@@ -126,7 +154,10 @@ export default function SettingsScreen() {
               <View style={{ flex: 1 }}>
                 <AppText variant="label">{SOURCE_LABEL[s]}</AppText>
                 <AppText variant="caption" tone="muted">
-                  {SOURCE_AUDIENCE[s]} · {Math.round(shares[s] * 100)}% del total
+                  {SOURCE_AUDIENCE[s]} ·{' '}
+                  {(s === 'popcorn' && !state.mdblistKey) || (s === 'comments' && !state.traktKey)
+                    ? 'sin su clave, este peso se reparte entre las demás'
+                    : `${Math.round(shares[s] * 100)}% del total`}
                 </AppText>
               </View>
               <Stepper
@@ -240,7 +271,7 @@ export default function SettingsScreen() {
 
       <Notice icon="info">
         {
-          'Datos de OMDb API y MDBList; los títulos en español se resuelven con Wikidata. IMDb y Rotten Tomatoes son marcas de sus respectivos dueños; CineRank no está afiliada a ellas. Las notas se guardan en caché 3 días para ahorrar consultas.'
+          'Datos de OMDb API, MDBList y Trakt; los títulos en español se resuelven con Wikidata. CineRank usa Trakt, pero Trakt no la respalda ni certifica. IMDb y Rotten Tomatoes son marcas de sus respectivos dueños; CineRank no está afiliada a ellas. Las notas se guardan en caché 3 días para ahorrar consultas.'
         }
       </Notice>
     </Screen>

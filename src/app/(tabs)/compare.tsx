@@ -2,13 +2,14 @@ import { router } from 'expo-router';
 import { View } from 'react-native';
 
 import { DuelCard } from '@/components/duel-card';
+import { PlanPicker } from '@/components/plan-picker';
 import { formatScore } from '@/components/scores';
 import { Screen } from '@/components/screen';
 import { AppText, Button, EmptyState, Notice } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useEnrichCandidates } from '@/hooks/use-enrich-candidates';
 import { isTechnicalTie, rankMovies } from '@/lib/ranking';
-import { useApp } from '@/store/app-store';
+import { useActivePlan, useApp } from '@/store/app-store';
 
 /**
  * «¿Cuál es mejor?»: solo los títulos que marcaste en Ranking, cara a cara,
@@ -20,16 +21,23 @@ export default function CompareScreen() {
   useEnrichCandidates();
   const audienceEnabled = state.mdblistKey.length > 0;
   const selected = candidates.filter((m) => compareIds.includes(m.imdbID));
-  const ranked = rankMovies(selected, settings, 'score');
-  const tie = isTechnicalTie(ranked, 'score');
+  // Con un plan de hoy se ordena «Para hoy»; sin plan, por CineScore.
+  const plan = useActivePlan();
+  const sortKey = plan ? 'today' : 'score';
+  const ranked = rankMovies(selected, settings, sortKey, plan);
+  const tie = isTechnicalTie(ranked, sortKey);
   const [first, second] = ranked;
+  const valueOf = (item: (typeof ranked)[number]) => (plan ? item.todayScore : item.score);
+  const firstValue = first ? valueOf(first) : null;
+  const secondValue = second ? valueOf(second) : null;
 
   const header = (
     <View style={{ gap: 2 }}>
       <AppText variant="display">¿Cuál es mejor?</AppText>
       {selected.length > 0 ? (
         <AppText variant="caption" tone="muted">
-          {selected.length} {selected.length === 1 ? 'título' : 'títulos'} frente a frente · por CineScore
+          {selected.length} {selected.length === 1 ? 'título' : 'títulos'} frente a frente · por{' '}
+          {plan ? 'Para hoy' : 'CineScore'}
         </AppText>
       ) : null}
     </View>
@@ -65,18 +73,20 @@ export default function CompareScreen() {
     <Screen>
       {header}
 
+      <PlanPicker />
+
       {selected.length === 1 ? (
         <Notice icon="info" title="Marca al menos otro título">
           En Ranking, toca la balanza de otra opción para enfrentarlas aquí.
         </Notice>
-      ) : first && second && first.score != null && second.score != null ? (
+      ) : first && second && firstValue != null && secondValue != null ? (
         tie ? (
           <Notice icon="scale" tone="warning" title="Empate técnico">
-            {`${first.movie.title} y ${second.movie.title} están a menos de 2 puntos en CineScore. Cualquiera es buena elección: decide por género o duración.`}
+            {`${first.movie.title} y ${second.movie.title} están a menos de 2 puntos ${plan ? 'para tu plan de hoy' : 'en CineScore'}. Cualquiera es buena elección: decide por género o duración.`}
           </Notice>
         ) : (
           <Notice icon="trophy" title={`Gana ${first.movie.title}`}>
-            {`${formatScore(first.score)}/100 en CineScore, ${formatScore(first.score - second.score)} puntos por delante de ${second.movie.title}.`}
+            {`${formatScore(firstValue)}/100 ${plan ? 'para tu plan de hoy' : 'en CineScore'}, ${formatScore(firstValue - secondValue)} puntos por delante de ${second.movie.title}.`}
           </Notice>
         )
       ) : null}
@@ -90,6 +100,8 @@ export default function CompareScreen() {
             audienceEnabled={audienceEnabled}
             highlight={index === 0 && item.rank === 1 && ranked.length > 1}
             onRemove={() => dispatch({ type: 'toggleCompare', imdbID: item.movie.imdbID })}
+            today={plan != null}
+            commentsEnabled={state.traktKey.length > 0}
           />
         ))}
       </View>

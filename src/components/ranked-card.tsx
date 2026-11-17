@@ -2,12 +2,13 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { LinearTransition } from 'react-native-reanimated';
 
+import { FitTag } from '@/components/plan-picker';
 import { Backdrop, Poster } from '@/components/poster';
 import { formatRuntime, ScoreNumber, TierLabel } from '@/components/scores';
 import { Icon } from '@/components/icon';
 import { AppText, Button, IconButton } from '@/components/ui';
 import { Palette, Radius, Spacing } from '@/constants/theme';
-import type { RankedMovie } from '@/lib/ranking';
+import { tierFor, type RankedMovie } from '@/lib/ranking';
 
 function openMovie(imdbID: string) {
   router.push({ pathname: '/movie/[id]', params: { id: imdbID } });
@@ -59,8 +60,11 @@ export function WinnerHero({
   verdict,
   compared,
   onToggleCompare,
+  today,
 }: {
   item: RankedMovie;
+  /** Muestra la puntuación «Para hoy» (con tu plan) en lugar del CineScore. */
+  today?: boolean;
   /** "Tu mejor opción" o "Empate técnico". */
   overline: string;
   /** Por cuánto gana, en una frase. */
@@ -69,6 +73,8 @@ export function WinnerHero({
   onToggleCompare: () => void;
 }) {
   const { movie } = item;
+  const shown = today ? item.todayScore : item.score;
+  const tier = shown == null ? null : tierFor(shown);
   return (
     <View style={{ gap: Spacing.three }}>
       <Pressable
@@ -89,9 +95,17 @@ export function WinnerHero({
         </Backdrop>
       </Pressable>
       <View style={styles.heroScore}>
-        <ScoreNumber score={item.score} tier={item.tier} size="md" />
+        <ScoreNumber score={shown} tier={tier} size="md" />
         <View style={{ flex: 1 }}>
-          <TierLabel tier={item.tier} />
+          <TierLabel tier={tier} />
+          {today && item.planFit ? (
+            <AppText variant="caption" numberOfLines={2}>
+              <FitTag fit={item.planFit} />
+              {item.planFit.reasons[0] ? (
+                <AppText variant="caption" tone="secondary">{` · ${item.planFit.reasons[0]}`}</AppText>
+              ) : null}
+            </AppText>
+          ) : null}
           <AppText variant="caption" tone="muted">
             {verdict}
           </AppText>
@@ -114,8 +128,11 @@ export function RankRow({
   onRemove,
   compared,
   onToggleCompare,
+  showFit,
 }: {
   item: RankedMovie;
+  /** Con un plan de hoy: muestra si encaja y por qué en lugar del año y la duración. */
+  showFit?: boolean;
   /** Cifra que se muestra a la derecha (CineScore u otra fuente según el orden). */
   value: string;
   valueColor: string;
@@ -142,17 +159,28 @@ export function RankRow({
       <Pressable
         onPress={() => openMovie(movie.imdbID)}
         accessibilityRole="button"
-        accessibilityLabel={`Puesto ${item.rank ?? 'sin puesto'}: ${movie.title}, ${item.tier?.label ?? 'sin datos'}, ${value}`}
+        accessibilityLabel={`Puesto ${item.rank ?? 'sin puesto'}: ${movie.title}, ${item.tier?.label ?? 'sin datos'}${
+          showFit && item.planFit ? `, ${item.planFit.notForKids ? 'no apta para niños' : item.planFit.label.toLowerCase()} con tu plan` : ''
+        }, ${value}`}
         style={({ pressed }) => [styles.main, pressed && { opacity: 0.7 }]}>
         <Poster uri={movie.poster} width={42} title={movie.title} />
         <View style={styles.info}>
           <AppText variant="label" numberOfLines={2}>
             {movie.title}
           </AppText>
-          <AppText variant="caption" numberOfLines={1}>
-            <TierLabel tier={item.tier} />
-            {meta ? <AppText variant="caption" tone="muted">{` · ${meta}`}</AppText> : null}
-          </AppText>
+          {showFit && item.planFit ? (
+            <AppText variant="caption" numberOfLines={1}>
+              <FitTag fit={item.planFit} />
+              {item.planFit.reasons[0] ? (
+                <AppText variant="caption" tone="muted">{` · ${item.planFit.reasons[0]}`}</AppText>
+              ) : null}
+            </AppText>
+          ) : (
+            <AppText variant="caption" numberOfLines={1}>
+              <TierLabel tier={item.tier} />
+              {meta ? <AppText variant="caption" tone="muted">{` · ${meta}`}</AppText> : null}
+            </AppText>
+          )}
         </View>
         <AppText style={[styles.value, { color: valueColor }]}>{value}</AppText>
       </Pressable>

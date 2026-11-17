@@ -31,7 +31,7 @@ function movie(awards: string | null, imdb = 8.0, rt: number | null = 80): Movie
 }
 
 const settings = (awardsBonus: number): RankingSettings => ({
-  weights: { imdb: 50, rt: 50, popcorn: 0 },
+  weights: { imdb: 50, rt: 50, popcorn: 0, comments: 0 },
   voteConfidence: false,
   minVotes: 10_000,
   awardsBonus,

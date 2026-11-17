@@ -8,15 +8,19 @@ import { Icon, type IconName } from '@/components/icon';
 import { Backdrop } from '@/components/poster';
 import { formatRuntime, formatVotes, RatingsRow, ScoreNumber, SourceDot, TierLabel } from '@/components/scores';
 import { Screen } from '@/components/screen';
+import { Synopsis } from '@/components/synopsis';
+import { TrailerCard } from '@/components/trailer-card';
 import { AppText, Button, Card, Divider, IconButton, Notice } from '@/components/ui';
 import { Palette, Spacing } from '@/constants/theme';
 import { describeAwards } from '@/lib/awards';
+import { planSummary } from '@/lib/plan';
 import { getMovie, imdbUrl, OmdbError, peekMovie, rottenTomatoesSearchUrl } from '@/lib/omdb';
+import { getCommentsScore } from '@/lib/trakt';
 import { scoreMovie } from '@/lib/ranking';
 import { SOURCE_LABEL, type Movie, type SourceKey } from '@/lib/types';
-import { MAX_CANDIDATES, useApiKeys, useApp } from '@/store/app-store';
+import { MAX_CANDIDATES, useActivePlan, useApiKeys, useApp } from '@/store/app-store';
 
-const SOURCES: SourceKey[] = ['imdb', 'rt', 'popcorn'];
+const SOURCES: SourceKey[] = ['imdb', 'rt', 'popcorn', 'comments'];
 
 /** Cabecera transparente: la portada llega hasta arriba y solo queda la flecha de volver. */
 const IMMERSIVE_HEADER = {
@@ -30,6 +34,7 @@ export default function MovieScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { state, dispatch } = useApp();
   const { omdb, mdblist } = useApiKeys();
+  const plan = useActivePlan();
   const insets = useSafeAreaInsets();
   const candidate = state.candidates.find((m) => m.imdbID === id) ?? null;
   const [fetched, setFetched] = useState<Movie | null>(() => peekMovie(id));
@@ -55,6 +60,39 @@ export default function MovieScreen() {
     };
   }, [id, needsFetch, isCandidate, omdb, mdblist, state.hydrated, dispatch]);
 
+  // Con Client ID de Trakt, trae la nota de quienes comentan este título.
+  const traktKey = state.traktKey;
+  const movieType = movie?.type;
+  const commentsChecked = movie?.commentsChecked ?? false;
+  const hasMovie = movie != null;
+  useEffect(() => {
+    if (!traktKey || !hasMovie || commentsChecked) return;
+    let cancelled = false;
+    getCommentsScore(traktKey, id, movieType)
+      .then((r) => {
+        if (cancelled) return;
+        if (isCandidate) {
+          dispatch({ type: 'setComments', imdbID: id, comments: r.score, count: r.rated });
+        } else {
+          setFetched((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  ratings: { ...prev.ratings, comments: r.score, commentsCount: r.rated },
+                  commentsChecked: true,
+                }
+              : prev,
+          );
+        }
+      })
+      .catch(() => {
+        // Sin conexión o clave inválida: la ficha se muestra sin comentarios.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [traktKey, id, movieType, hasMovie, commentsChecked, isCandidate, dispatch]);
+
   if (!movie) {
     return (
       <View style={styles.center}>
@@ -72,7 +110,7 @@ export default function MovieScreen() {
     );
   }
 
-  const scored = scoreMovie(movie, state.settings);
+  const scored = scoreMovie(movie, state.settings, plan);
   const inList = candidate != null;
   const full = state.candidates.length >= MAX_CANDIDATES;
   const showAudience = !!mdblist || movie.ratings.popcorn != null;
@@ -121,6 +159,8 @@ export default function MovieScreen() {
         ) : null}
       </View>
 
+      <TrailerCard movie={movie} hasMdblistKey={!!mdblist} />
+
       <View style={{ gap: Spacing.four }}>
         <View style={styles.scoreRow}>
           <ScoreNumber score={scored.score} tier={scored.tier} size="lg" />
@@ -161,6 +201,17 @@ export default function MovieScreen() {
               }.`}
             />
           ) : null}
+          {plan && scored.planFit ? (
+            <Fact
+              icon="masks"
+              warning={scored.planFit.label === 'No encaja'}
+              text={`Para tu plan de hoy (${planSummary(plan)}): ${
+                scored.planFit.notForKids ? 'no apta para niños' : scored.planFit.label.toLowerCase()
+              }${scored.planFit.reasons.length ? `. ${scored.planFit.reasons.join(' · ')}` : ''}${
+                scored.planFit.penalty > 0 ? ` (−${scored.planFit.penalty} para hoy)` : ''
+              }.`}
+            />
+          ) : null}
           {scored.awards ? (
             <Fact
               icon="trophy"
@@ -169,13 +220,23 @@ export default function MovieScreen() {
               }.`}
             />
           ) : null}
-          {scored.missing.map((s) => (
+          {movie.ratings.comments != null ? (
+            <Fact
+              icon="critic"
+              text={`🗣 ${movie.ratings.comments}% de media entre ${movie.ratings.commentsCount ?? 0} comentarios con nota en Trakt (los más votados pesan más).`}
+            />
+          ) : null}
+          {scored.missing
+            .filter((s) => s !== 'comments' || (!!traktKey && commentsChecked))
+            .map((s) => (
             <Fact
               key={s}
               icon="warning"
               warning
               text={
-                s !== 'popcorn'
+                s === 'comments'
+                  ? 'Trakt no tiene suficientes comentarios con nota para este título.'
+                  : s !== 'popcorn'
                   ? `OMDb no tiene dato de ${SOURCE_LABEL[s]} para este título.`
                   : mdblist
                     ? 'MDBList no tiene el puntaje del público de RT para este título.'
@@ -240,15 +301,7 @@ export default function MovieScreen() {
         ) : null}
       </View>
 
-      {movie.plot ? (
-        <View style={{ gap: Spacing.two }}>
-          <AppText variant="heading">Sinopsis</AppText>
-          <AppText tone="secondary">{movie.plot}</AppText>
-          <AppText variant="caption" tone="muted">
-            En inglés, tal como la entrega OMDb.
-          </AppText>
-        </View>
-      ) : null}
+      <Synopsis key={movie.imdbID} imdbID={movie.imdbID} englishPlot={movie.plot} />
 
       <View>
         {[

@@ -9,10 +9,10 @@ import { formatRuntime, formatVotes, ScoreBadge, SourceBar, TierPill } from '@/c
 import { AppText, IconButton } from '@/components/ui';
 import { Palette, Radius, Spacing, TierColor } from '@/constants/theme';
 import { describeAwards } from '@/lib/awards';
-import type { RankedMovie } from '@/lib/ranking';
+import { tierFor, type RankedMovie } from '@/lib/ranking';
 import { SOURCE_LABEL, type RankingSettings, type SourceKey } from '@/lib/types';
 
-const SOURCES: SourceKey[] = ['imdb', 'rt', 'popcorn'];
+const SOURCES: SourceKey[] = ['imdb', 'rt', 'popcorn', 'comments'];
 
 /** "a", "a y b", "a, b y c" */
 function joinEs(items: string[]) {
@@ -29,8 +29,14 @@ export function DuelCard({
   audienceEnabled,
   highlight,
   onRemove,
+  today,
+  commentsEnabled,
 }: {
   item: RankedMovie;
+  /** Hay Client ID de Trakt, así que los comentarios deberían existir. */
+  commentsEnabled?: boolean;
+  /** Con un plan de hoy: la cifra y el nivel son los de «Para hoy». */
+  today?: boolean;
   settings: RankingSettings;
   /** Hay clave de MDBList, así que el puntaje del público de RT debería existir. */
   audienceEnabled: boolean;
@@ -41,12 +47,15 @@ export function DuelCard({
   const details = [movie.year, movie.runtimeMin ? formatRuntime(movie.runtimeMin) : null, movie.genres.slice(0, 2).join(', ')]
     .filter(Boolean)
     .join(' · ');
-  const accent = item.tier ? TierColor[item.tier.key] : Palette.borderStrong;
-  const visibleSources = SOURCES.filter(
-    (s) => item.scores[s] != null || (settings.weights[s] > 0 && (s !== 'popcorn' || audienceEnabled)),
-  );
-  // Sin clave de MDBList, la falta del público de RT no se repite en cada tarjeta.
-  const missing = item.missing.filter((s) => s !== 'popcorn' || audienceEnabled);
+  const shown = today ? item.todayScore : item.score;
+  const tier = shown == null ? null : tierFor(shown);
+  const accent = tier ? TierColor[tier.key] : Palette.borderStrong;
+  const fit = today ? item.planFit : null;
+  // Una fuente opcional sin su clave (MDBList o Trakt) no se muestra ni se avisa en cada tarjeta.
+  const enabled = (s: SourceKey) =>
+    s === 'popcorn' ? audienceEnabled : s === 'comments' ? !!commentsEnabled && !!movie.commentsChecked : true;
+  const visibleSources = SOURCES.filter((s) => item.scores[s] != null || ((settings.weights[s] ?? 0) > 0 && enabled(s)));
+  const missing = item.missing.filter(enabled);
 
   // El botón de quitar es hermano (no hijo) del área pulsable: en web un
   // <button> no puede contener otro <button>.
@@ -86,10 +95,15 @@ export function DuelCard({
                 {details}
               </AppText>
             ) : null}
-            <TierPill tier={item.tier} />
+            <TierPill tier={tier} />
           </View>
           <View style={styles.right}>
-            <ScoreBadge score={item.score} tier={item.tier} size={highlight ? 'md' : 'sm'} />
+            <ScoreBadge
+              score={shown}
+              tier={tier}
+              size={highlight ? 'md' : 'sm'}
+              caption={today ? 'PARA HOY' : 'CINESCORE'}
+            />
           </View>
         </View>
 
@@ -106,6 +120,16 @@ export function DuelCard({
         </View>
 
         <View style={styles.notes}>
+          {fit ? (
+            <Note
+              icon="masks"
+              warning={fit.label === 'No encaja'}
+              accent={fit.label === 'Encaja'}
+              text={`${fit.notForKids ? 'No apta para niños' : fit.label}${fit.reasons.length ? `: ${fit.reasons.join(' · ')}` : ''}${
+                fit.penalty > 0 ? ` · −${fit.penalty} para hoy` : ''
+              }`}
+            />
+          ) : null}
           {item.awards ? (
             <Note
               icon="trophy"

@@ -6,15 +6,25 @@ import type { Tier } from '@/lib/ranking';
 import type { Movie, SourceKey } from '@/lib/types';
 
 /** Marca de cada fuente: IMDb por su nombre, Rotten Tomatoes por sus tomates y palomitas. */
-const MARK: Record<SourceKey, string> = { imdb: 'IMDb', rt: '🍅', popcorn: '🍿' };
-const MARK_LONG: Record<SourceKey, string> = { imdb: 'IMDb', rt: '🍅 Crítica', popcorn: '🍿 Público' };
-const SPOKEN_NAME: Record<SourceKey, string> = { imdb: 'IMDb', rt: 'crítica de RT', popcorn: 'público de RT' };
+const MARK: Record<SourceKey, string> = { imdb: 'IMDb', rt: '🍅', popcorn: '🍿', comments: '🗣' };
+const MARK_LONG: Record<SourceKey, string> = {
+  imdb: 'IMDb',
+  rt: '🍅 Crítica',
+  popcorn: '🍿 Público',
+  comments: '🗣 Comentarios',
+};
+const SPOKEN_NAME: Record<SourceKey, string> = {
+  imdb: 'IMDb',
+  rt: 'crítica de RT',
+  popcorn: 'público de RT',
+  comments: 'comentarios de Trakt',
+};
 
 /** Texto de la calificación en el formato original de cada fuente. */
 export function formatSource(movie: Movie, source: SourceKey): string {
   const r = movie.ratings;
   if (source === 'imdb') return r.imdb == null ? '—' : r.imdb.toFixed(1);
-  const value = source === 'rt' ? r.rt : r.popcorn;
+  const value = source === 'rt' ? r.rt : source === 'popcorn' ? r.popcorn : (r.comments ?? null);
   return value == null ? '—' : `${value}%`;
 }
 
@@ -37,8 +47,9 @@ export function formatScore(score: number | null): string {
 }
 
 function visibleSources(movie: Movie, showAudience: boolean): SourceKey[] {
-  return (['imdb', 'rt', 'popcorn'] as SourceKey[]).filter(
-    (s) => s !== 'popcorn' || showAudience || movie.ratings.popcorn != null,
+  // Los comentarios de Trakt solo aparecen cuando el título ya los tiene (se piden para tu lista y la ficha).
+  return (['imdb', 'rt', 'popcorn', 'comments'] as SourceKey[]).filter((s) =>
+    s === 'comments' ? movie.ratings.comments != null : s !== 'popcorn' || showAudience || movie.ratings.popcorn != null,
   );
 }
 
@@ -54,11 +65,31 @@ export function SourceDot({ source, size = 7 }: { source: SourceKey; size?: numb
 }
 
 /** Punto de color + "IMDb", 🍅 o 🍿 (con "Crítica"/"Público" en la versión larga). */
-export function SourceMark({ source, long, style }: { source: SourceKey; long?: boolean; style?: StyleProp<TextStyle> }) {
+export function SourceMark({
+  source,
+  long,
+  singleLine,
+  fit,
+  style,
+}: {
+  source: SourceKey;
+  long?: boolean;
+  /** En una sola línea (las barras tienen una columna de etiqueta de ancho fijo). */
+  singleLine?: boolean;
+  /** Una línea que, si no cabe, reduce un poco la letra (columnas estrechas). */
+  fit?: boolean;
+  style?: StyleProp<TextStyle>;
+}) {
   return (
     <View style={styles.mark}>
       <SourceDot source={source} />
-      <AppText variant="caption" tone="secondary" style={style}>
+      <AppText
+        variant="caption"
+        tone="secondary"
+        numberOfLines={singleLine || fit ? 1 : undefined}
+        adjustsFontSizeToFit={fit}
+        minimumFontScale={fit ? 0.75 : undefined}
+        style={[{ flexShrink: 1 }, style]}>
         {long ? MARK_LONG[source] : MARK[source]}
       </AppText>
     </View>
@@ -127,7 +158,7 @@ export function RatingsRow({
             accessibilityLabel={`${SPOKEN_NAME[s]}: ${value === '—' ? 'sin dato' : value}`}
             style={[styles.ratingCol, i > 0 && styles.ratingDivider, dimmed.includes(s) && { opacity: 0.45 }]}>
             <AppText style={[styles.ratingValue, value === '—' && { color: Palette.textMuted }]}>{value}</AppText>
-            <SourceMark source={s} long />
+            <SourceMark source={s} long fit />
           </View>
         );
       })}
@@ -151,7 +182,7 @@ export function SourceBar({
   return (
     <View style={[styles.barRow, dimmed && { opacity: 0.45 }]}>
       <View style={styles.barLabel}>
-        <SourceMark source={source} long />
+        <SourceMark source={source} long singleLine />
       </View>
       <View style={styles.track}>
         {value != null ? (
@@ -205,19 +236,32 @@ export function ScoreNumber({
 }
 
 /** CineScore en un recuadro con el color de su nivel. */
-export function ScoreBadge({ score, tier, size = 'md' }: { score: number | null; tier: Tier | null; size?: 'sm' | 'md' }) {
+export function ScoreBadge({
+  score,
+  tier,
+  size = 'md',
+  caption = 'CINESCORE',
+}: {
+  score: number | null;
+  tier: Tier | null;
+  size?: 'sm' | 'md';
+  /** Texto bajo la cifra ("CINESCORE" o "PARA HOY"). */
+  caption?: string;
+}) {
   const color = tier ? TierColor[tier.key] : Palette.textMuted;
   const dims = size === 'md' ? 70 : 54;
   const font = size === 'md' ? 22 : 17;
   return (
     <View
-      accessibilityLabel={score == null ? 'Sin CineScore' : `CineScore ${formatScore(score)} de 100`}
+      accessibilityLabel={
+        score == null ? 'Sin puntuación' : `${caption === 'CINESCORE' ? 'CineScore' : 'Para hoy'} ${formatScore(score)} de 100`
+      }
       style={[styles.badge, { width: dims, height: dims, borderColor: color, backgroundColor: `${color}1F` }]}>
       <AppText style={{ fontSize: font, lineHeight: font * 1.15, fontWeight: '800', color, fontVariant: ['tabular-nums'] }}>
         {formatScore(score)}
       </AppText>
       {size === 'md' ? (
-        <AppText style={{ fontSize: 9, lineHeight: 12, letterSpacing: 0.8, fontWeight: '700', color }}>CINESCORE</AppText>
+        <AppText style={{ fontSize: 9, lineHeight: 12, letterSpacing: 0.8, fontWeight: '700', color }}>{caption}</AppText>
       ) : null}
     </View>
   );
@@ -260,7 +304,8 @@ const styles = StyleSheet.create({
   ratingDivider: { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: Palette.border },
   ratingValue: { fontSize: 22, lineHeight: 28, fontWeight: '700', fontVariant: ['tabular-nums'], color: Palette.text },
   barRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  barLabel: { width: 96 },
+  // Ancho para la etiqueta más larga ("🗣 Comentarios") en una sola línea.
+  barLabel: { width: 122 },
   track: {
     flex: 1,
     height: 7,

@@ -43,6 +43,7 @@ export const SourceColor: Record<SourceKey, string> = {
   imdb: '#F5C518',
   rt: '#FA5A3C',
   popcorn: '#5AB8FF',
+  comments: '#B794F6',
 };
 
 /** Escala cálida de niveles: oro, champán, humo, cobre y telón. */

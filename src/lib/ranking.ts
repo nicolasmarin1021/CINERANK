@@ -14,9 +14,10 @@
  * Archivo puro (sin React Native) para poder probarlo con `node --test`.
  */
 import { awardsStrength, parseAwards, type AwardsInfo } from './awards.ts';
+import { planFit as computePlanFit, type Plan, type PlanFit } from './plan.ts';
 import type { Movie, RankingSettings, SortKey, SourceKey, Weights } from './types';
 
-const KEYS: readonly SourceKey[] = ['imdb', 'rt', 'popcorn'];
+const KEYS: readonly SourceKey[] = ['imdb', 'rt', 'popcorn', 'comments'];
 
 /** Valor previo del promedio bayesiano: la nota media aproximada en IMDb (6.5/10). */
 export const IMDB_PRIOR = 65;
@@ -28,7 +29,7 @@ export const CONSENSUS_GAP = 15;
 export const TIE_THRESHOLD = 2;
 
 export const DEFAULT_SETTINGS: RankingSettings = {
-  weights: { imdb: 50, rt: 50, popcorn: 50 },
+  weights: { imdb: 50, rt: 50, popcorn: 50, comments: 25 },
   voteConfidence: true,
   minVotes: 10_000,
   awardsBonus: 6,
@@ -79,6 +80,10 @@ export interface ScoredMovie {
   awards: AwardsInfo | null;
   /** Puntos sumados por premios (0 si no tiene o si el bonus está desactivado). */
   awardsBonus: number;
+  /** Encaje con tu plan de hoy, o null si no hay plan (o nada que evaluar). */
+  planFit: PlanFit | null;
+  /** CineScore menos el desajuste con tu plan de hoy (igual al CineScore sin plan). */
+  todayScore: number | null;
   contributions: Contribution[];
   /** Fuentes con peso > 0 de las que no hay dato. */
   missing: SourceKey[];
@@ -123,14 +128,14 @@ export function consensusFor(critics: number | null, audience: number | null): C
 
 /** Pesos como porcentajes que suman 100 (solo las fuentes activas). */
 export function weightShares(weights: Weights): Record<SourceKey, number> {
-  const total = KEYS.reduce((acc, k) => acc + Math.max(0, weights[k]), 0);
-  const out = { imdb: 0, rt: 0, popcorn: 0 } as Record<SourceKey, number>;
+  const total = KEYS.reduce((acc, k) => acc + Math.max(0, weights[k] ?? 0), 0);
+  const out = { imdb: 0, rt: 0, popcorn: 0, comments: 0 } as Record<SourceKey, number>;
   if (total <= 0) return out;
-  for (const k of KEYS) out[k] = Math.max(0, weights[k]) / total;
+  for (const k of KEYS) out[k] = Math.max(0, weights[k] ?? 0) / total;
   return out;
 }
 
-export function scoreMovie(movie: Movie, settings: RankingSettings): ScoredMovie {
+export function scoreMovie(movie: Movie, settings: RankingSettings, plan: Plan | null = null): ScoredMovie {
   const { ratings } = movie;
   const imdbRaw = ratings.imdb == null ? null : ratings.imdb * 10;
 
@@ -143,9 +148,10 @@ export function scoreMovie(movie: Movie, settings: RankingSettings): ScoredMovie
     imdb: imdb == null ? null : round1(imdb),
     rt: ratings.rt,
     popcorn: ratings.popcorn,
+    comments: ratings.comments ?? null,
   };
 
-  const active = KEYS.filter((k) => settings.weights[k] > 0);
+  const active = KEYS.filter((k) => (settings.weights[k] ?? 0) > 0);
   const configuredWeight = active.reduce((acc, k) => acc + settings.weights[k], 0);
   const available = active.filter((k) => scores[k] != null);
   const availableWeight = available.reduce((acc, k) => acc + settings.weights[k], 0);
@@ -162,6 +168,8 @@ export function scoreMovie(movie: Movie, settings: RankingSettings): ScoredMovie
   const awardsBonus =
     baseScore == null ? 0 : round1(Math.max(0, settings.awardsBonus ?? 0) * awardsStrength(awards));
   const score = baseScore == null ? null : Math.min(100, round1(baseScore + awardsBonus));
+  const fit = plan ? computePlanFit(movie, plan) : null;
+  const todayScore = score == null ? null : fit ? Math.max(0, round1(score - fit.penalty)) : score;
 
   return {
     movie,
@@ -172,6 +180,8 @@ export function scoreMovie(movie: Movie, settings: RankingSettings): ScoredMovie
     baseScore,
     awards,
     awardsBonus,
+    planFit: fit,
+    todayScore,
     contributions,
     missing,
     coverage: configuredWeight > 0 ? availableWeight / configuredWeight : 0,
@@ -185,6 +195,8 @@ export function sortValue(item: ScoredMovie, key: SortKey): number | null {
   switch (key) {
     case 'score':
       return item.score;
+    case 'today':
+      return item.todayScore;
     case 'imdb':
       return item.imdbRaw;
     default:
@@ -207,8 +219,13 @@ function compare(a: ScoredMovie, b: ScoredMovie, key: SortKey) {
   return a.movie.title.localeCompare(b.movie.title);
 }
 
-export function rankMovies(movies: Movie[], settings: RankingSettings, sortBy: SortKey = 'score'): RankedMovie[] {
-  const sorted = movies.map((m) => scoreMovie(m, settings)).sort((a, b) => compare(a, b, sortBy));
+export function rankMovies(
+  movies: Movie[],
+  settings: RankingSettings,
+  sortBy: SortKey = 'score',
+  plan: Plan | null = null,
+): RankedMovie[] {
+  const sorted = movies.map((m) => scoreMovie(m, settings, plan)).sort((a, b) => compare(a, b, sortBy));
   let position = 0;
   return sorted.map((item) => ({
     ...item,

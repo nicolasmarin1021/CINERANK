@@ -52,17 +52,18 @@ function movie(
     ratings: { imdb, imdbVotes: votes, rt, popcorn },
     audienceChecked: true,
     providers: [],
+    trailer: null,
     fetchedAt: 0,
   };
 }
 
 const noAdjust: RankingSettings = {
-  weights: { imdb: 50, rt: 50, popcorn: 0 },
+  weights: { imdb: 50, rt: 50, popcorn: 0, comments: 0 },
   voteConfidence: false,
   awardsBonus: 0,
   minVotes: 10_000,
 };
-const thirds: RankingSettings = { ...noAdjust, weights: { imdb: 50, rt: 50, popcorn: 50 } };
+const thirds: RankingSettings = { ...noAdjust, weights: { imdb: 50, rt: 50, popcorn: 50, comments: 0 } };
 
 describe('parseo de OMDb', () => {
   it('convierte los formatos de cada fuente', () => {
@@ -128,6 +129,10 @@ describe('parseo de OMDb', () => {
     const actualizada = upgradeMovie(sinPlataformas as Movie);
     assert.equal(actualizada.audienceChecked, false);
     assert.equal(actualizada.providers, null);
+    // Y las guardadas antes de traer el tráiler, también.
+    const sinTrailer = { ...movie('t', 7.0, 80, 85), audienceChecked: true } as Partial<Movie>;
+    delete sinTrailer.trailer;
+    assert.equal(upgradeMovie(sinTrailer as Movie).audienceChecked, false);
   });
 });
 
@@ -141,7 +146,7 @@ describe('CineScore', () => {
   });
 
   it('respeta los pesos personalizados', () => {
-    const settings: RankingSettings = { ...noAdjust, weights: { imdb: 25, rt: 75, popcorn: 0 } };
+    const settings: RankingSettings = { ...noAdjust, weights: { imdb: 25, rt: 75, popcorn: 0, comments: 0 } };
     assert.equal(scoreMovie(movie('a', 6.0, 100, null), settings).score, 90);
   });
 
@@ -205,8 +210,8 @@ describe('CineScore', () => {
   });
 
   it('normaliza los pesos a porcentajes', () => {
-    assert.deepEqual(weightShares({ imdb: 40, rt: 40, popcorn: 20 }), { imdb: 0.4, rt: 0.4, popcorn: 0.2 });
-    assert.deepEqual(weightShares({ imdb: 0, rt: 0, popcorn: 0 }), { imdb: 0, rt: 0, popcorn: 0 });
+    assert.deepEqual(weightShares({ imdb: 40, rt: 40, popcorn: 20, comments: 0 }), { imdb: 0.4, rt: 0.4, popcorn: 0.2, comments: 0 });
+    assert.deepEqual(weightShares({ imdb: 0, rt: 0, popcorn: 0, comments: 0 }), { imdb: 0, rt: 0, popcorn: 0, comments: 0 });
   });
 });
 

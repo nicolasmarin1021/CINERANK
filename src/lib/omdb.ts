@@ -18,7 +18,7 @@ import type { ApiKeys, MediaType, Movie, SearchHit } from './types';
 
 const BASE_URL = 'https://www.omdbapi.com/';
 // v3: descarta fichas guardadas sin el puntaje del público de RT (versiones anteriores).
-const CACHE_PREFIX = 'cinerank:movie:v4:';
+const CACHE_PREFIX = 'cinerank:movie:v5:';
 /** Las calificaciones cambian poco: 3 días de caché ahorran cuota diaria. */
 const CACHE_TTL_MS = 3 * 24 * 60 * 60 * 1000;
 const TIMEOUT_MS = 12_000;
@@ -148,11 +148,12 @@ async function addAudience(movie: Movie, keys: ApiKeys): Promise<Movie> {
       ...movie,
       ratings: { ...movie.ratings, popcorn: scores.popcorn, rt: movie.ratings.rt ?? scores.tomatoes },
       providers: scores.providers,
+      trailer: scores.trailer,
       audienceChecked: true,
     };
   } catch (err) {
     // Si MDBList no conoce el título no hay nada más que buscar; otros errores se reintentan luego.
-    if (err instanceof MdblistError && err.kind === 'not-found') return { ...movie, providers: [], audienceChecked: true };
+    if (err instanceof MdblistError && err.kind === 'not-found') return { ...movie, providers: [], trailer: null, audienceChecked: true };
     return movie;
   }
 }

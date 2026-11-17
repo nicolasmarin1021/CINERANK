@@ -37,6 +37,17 @@ export function CompareTable({ items, showAudience }: { items: RankedMovie[]; sh
       render: (i) => formatScore(i.score),
       highlight: true,
     },
+    ...(items.some((i) => i.planFit != null)
+      ? [
+          {
+            key: 'today',
+            label: '🎭 Para hoy',
+            values: items.map((i) => i.todayScore),
+            render: (i: RankedMovie) => formatScore(i.todayScore),
+            highlight: true,
+          },
+        ]
+      : []),
     {
       key: 'imdb',
       label: 'IMDb',
@@ -76,6 +87,14 @@ export function CompareTable({ items, showAudience }: { items: RankedMovie[]; sh
       highlight: true,
     },
     {
+      key: 'comments',
+      label: '🗣 Comentarios',
+      source: 'comments',
+      values: items.map((i) => i.movie.ratings.comments ?? null),
+      render: (i) => (i.movie.ratings.comments == null ? '—' : `${i.movie.ratings.comments}%`),
+      highlight: true,
+    },
+    {
       key: 'gap',
       label: 'Crítica − público',
       values: items.map(() => null),
@@ -98,7 +117,11 @@ export function CompareTable({ items, showAudience }: { items: RankedMovie[]; sh
     },
   ];
   // Sin clave de MDBList la fila del público de RT estaría vacía: solo se muestra si hay datos.
-  const rows = allRows.filter((row) => row.key !== 'popcorn' || showAudience || row.values.some((v) => v != null));
+  const rows = allRows.filter(
+    (row) =>
+      (row.key !== 'popcorn' || showAudience || row.values.some((v) => v != null)) &&
+      (row.key !== 'comments' || row.values.some((v) => v != null)),
+  );
 
   return (
     <View style={{ gap: Spacing.two }}>

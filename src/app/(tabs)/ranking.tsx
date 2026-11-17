@@ -6,21 +6,25 @@ import { CompareTable } from '@/components/compare-table';
 import { Icon } from '@/components/icon';
 import { useEnrichCandidates } from '@/hooks/use-enrich-candidates';
 import { OptionRow, OptionsSheet, SheetSection } from '@/components/options-sheet';
+import { PlanPicker } from '@/components/plan-picker';
 import { RankRow, WinnerHero } from '@/components/ranked-card';
 import { formatScore } from '@/components/scores';
 import { Screen } from '@/components/screen';
 import { AppText, Button, EmptyState, Notice, Segmented } from '@/components/ui';
 import { Palette, Spacing, TierColor } from '@/constants/theme';
 import { getMovie } from '@/lib/omdb';
-import { isTechnicalTie, rankMovies, sortValue, weightShares, type RankedMovie } from '@/lib/ranking';
+import { planPhrase } from '@/lib/plan';
+import { isTechnicalTie, rankMovies, sortValue, tierFor, weightShares, type RankedMovie } from '@/lib/ranking';
 import { SOURCE_SHORT, type SortKey, type SourceKey } from '@/lib/types';
-import { useApiKeys, useApp, type RuntimeFilter } from '@/store/app-store';
+import { useActivePlan, useApiKeys, useApp, type RuntimeFilter } from '@/store/app-store';
 
 const SORTS: { key: SortKey; label: string }[] = [
+  { key: 'today', label: 'Para hoy' },
   { key: 'score', label: 'CineScore' },
   { key: 'imdb', label: 'IMDb' },
   { key: 'rt', label: 'Crítica de RT' },
   { key: 'popcorn', label: 'Público de RT' },
+  { key: 'comments', label: 'Comentarios' },
 ];
 
 const RUNTIMES: { value: RuntimeFilter; label: string }[] = [
@@ -39,7 +43,11 @@ const VIEWS: { value: RankingView; label: string }[] = [
 export default function RankingScreen() {
   const { state, dispatch } = useApp();
   const apiKeys = useApiKeys();
-  const { settings, candidates, sortBy, maxRuntime, compareIds } = state;
+  const { settings, candidates, sortBy: savedSort, maxRuntime, compareIds } = state;
+  // Tu plan de hoy: si caducó (otro día), el orden «Para hoy» vuelve a CineScore.
+  const plan = useActivePlan();
+  const sortBy: SortKey = savedSort === 'today' && !plan ? 'score' : savedSort;
+  const byScore = sortBy === 'score' || sortBy === 'today';
   const audienceEnabled = state.mdblistKey.length > 0;
   const [view, setView] = useState<RankingView>('list');
   const [editing, setEditing] = useState(false);
@@ -53,7 +61,7 @@ export default function RankingScreen() {
 
   const visible = candidates.filter((m) => maxRuntime === 0 || m.runtimeMin == null || m.runtimeMin <= maxRuntime);
   const hidden = candidates.length - visible.length;
-  const ranked = rankMovies(visible, settings, sortBy);
+  const ranked = rankMovies(visible, settings, sortBy, plan);
   const tie = isTechnicalTie(ranked, sortBy);
   const shares = weightShares(settings.weights);
   const weightText = (Object.keys(shares) as SourceKey[])
@@ -113,12 +121,13 @@ export default function RankingScreen() {
     if (!first || !second || firstValue == null || secondValue == null) return '';
     if (tie) return `Menos de 2 puntos sobre ${second.movie.title} en ${sortLabel}. Decide por género o duración.`;
     const lead = `${formatSortDiff(sortBy, firstValue - secondValue)} por delante de ${second.movie.title}`;
-    return sortBy === 'score' ? `${lead}.` : `${formatSortValue(sortBy, firstValue)} en ${sortLabel}, ${lead}.`;
+    return byScore ? `${lead}.` : `${formatSortValue(sortBy, firstValue)} en ${sortLabel}, ${lead}.`;
   }
 
   function rowValue(item: RankedMovie) {
-    if (sortBy === 'score') {
-      return { text: formatScore(item.score), color: item.tier ? TierColor[item.tier.key] : Palette.textMuted };
+    if (byScore) {
+      const value = sortBy === 'today' ? item.todayScore : item.score;
+      return { text: formatScore(value), color: value == null ? Palette.textMuted : TierColor[tierFor(value).key] };
     }
     const value = sortValue(item, sortBy);
     return value == null
@@ -153,6 +162,9 @@ export default function RankingScreen() {
         </Pressable>
       </View>
 
+      {/* Con un solo título no hay nada que reordenar, pero un plan activo debe poder cambiarse o quitarse. */}
+      {candidates.length > 1 || plan ? <PlanPicker /> : null}
+
       {!audienceEnabled && settings.weights.popcorn > 0 ? (
         <Notice
           icon="people"
@@ -180,7 +192,10 @@ export default function RankingScreen() {
       {showHero ? (
         <WinnerHero
           item={first}
-          overline={tie ? 'Empate técnico' : 'Tu mejor opción'}
+          overline={
+            tie ? 'Empate técnico' : plan && sortBy === 'today' ? `Tu mejor opción ${planPhrase(plan)}` : 'Tu mejor opción'
+          }
+          today={sortBy === 'today'}
           verdict={verdict()}
           compared={compareIds.includes(first.movie.imdbID)}
           onToggleCompare={() => dispatch({ type: 'toggleCompare', imdbID: first.movie.imdbID })}
@@ -243,6 +258,7 @@ export default function RankingScreen() {
                   valueColor={value.color}
                   editing={editing}
                   onRemove={() => dispatch({ type: 'removeCandidate', imdbID: item.movie.imdbID })}
+                  showFit={plan != null}
                   compared={compareIds.includes(item.movie.imdbID)}
                   onToggleCompare={() => dispatch({ type: 'toggleCompare', imdbID: item.movie.imdbID })}
                 />
@@ -290,7 +306,7 @@ export default function RankingScreen() {
 
       <OptionsSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} title="Ordenar y filtrar">
         <SheetSection title="Ordenar por" />
-        {SORTS.filter((s) => s.key !== 'popcorn' || audienceEnabled).map((s) => (
+        {SORTS.filter((s) => (s.key !== 'popcorn' || audienceEnabled) && (s.key !== 'today' || plan) && (s.key !== 'comments' || state.traktKey)).map((s) => (
           <OptionRow
             key={s.key}
             label={s.label}
@@ -315,13 +331,13 @@ export default function RankingScreen() {
 /** Muestra el valor en la escala original de cada fuente. */
 function formatSortValue(key: SortKey, value: number, short = false) {
   if (key === 'imdb') return short ? (value / 10).toFixed(1) : `${(value / 10).toFixed(1)}/10`;
-  if (key === 'rt' || key === 'popcorn') return `${Math.round(value)}%`;
+  if (key === 'rt' || key === 'popcorn' || key === 'comments') return `${Math.round(value)}%`;
   return short ? formatScore(value) : `${formatScore(value)}/100`;
 }
 
 function formatSortDiff(key: SortKey, diff: number) {
   if (key === 'imdb') return `${(diff / 10).toFixed(1)} puntos`;
-  if (key === 'score') return `${formatScore(diff)} puntos`;
+  if (key === 'score' || key === 'today') return `${formatScore(diff)} puntos`;
   return `${Math.round(diff)} puntos`;
 }
 

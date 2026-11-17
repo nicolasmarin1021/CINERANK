@@ -11,9 +11,10 @@ Hecha con Expo SDK 58 (React Native 0.88, Expo Router, TypeScript).
   - **Lista o Tabla**: la tabla pone los títulos lado a lado, con el mejor valor de cada criterio en dorado.
   - **Ordenar y filtrar**: ordena por CineScore, IMDb, crítica o público de RT, y filtra por duración (hasta 1 h 30, 2 h o 2 h 30).
   - **Balanza**: marca los títulos que quieres enfrentar a fondo en «¿Cuál es mejor?».
+  - **Tu plan de hoy**: eliges qué te apetece (reír, adrenalina, emocionarte, pensar, pasar miedo, algo ligero) y con quién la ves (solo, en pareja, con amigos, en familia). El CineScore no cambia: aparece una puntuación «Para hoy» que resta hasta 15 puntos a lo que no encaja según género, clasificación por edad y duración, con el motivo a la vista. Vale hasta medianoche.
 - **¿Cuál es mejor?**: solo los títulos que marcaste, cara a cara: puesto, CineScore en recuadro, nivel, barras de color de IMDb, crítica y público, quién gana y, en la esquina, en qué plataformas está (Netflix, HBO Max, Prime Video…).
   - Desliza hacia abajo, o pulsa **Actualizar notas**, para volver a descargar las calificaciones.
-- **Ficha**: portada a pantalla completa, las tres notas, el desglose del CineScore, si la crítica y el público coinciden o no, la sinopsis, el reparto y enlaces a IMDb y Rotten Tomatoes.
+- **Ficha**: portada a pantalla completa, el **tráiler** (se abre dentro de la app; viene de MDBList, y si no hay, un atajo para buscarlo en YouTube), las notas, la sinopsis en español (resumen de Wikipedia; si no hay artículo, la original en inglés), el desglose del CineScore, si la crítica y el público coinciden o no, la sinopsis, el reparto y enlaces a IMDb y Rotten Tomatoes.
 
 El diseño usa una paleta inspirada en los teatros de Broadway (escenario negro, texto marfil, un único acento dorado y el rojo del telón) definida en [`src/constants/theme.ts`](src/constants/theme.ts).
 - **Ajustes**: cuánto pesa cada fuente (con presets como “Manda la crítica” o “Manda el público”), el bonus por premios, la corrección por número de votos y tus claves de OMDb y MDBList.
@@ -44,9 +45,11 @@ IMDb y Rotten Tomatoes no ofrecen una API pública gratuita, así que CineRank c
 | Servicio | Aporta | Clave |
 |---|---|---|
 | [OMDb API](https://www.omdbapi.com) | Ficha, nota y votos de IMDb, crítica de RT (🍅) | Obligatoria, gratis |
-| [MDBList](https://mdblist.com) | Público de RT (🍿), crítica de RT si OMDb no la tiene y plataformas donde verla (datos de EE. UU.) | Opcional, gratis |
+| [MDBList](https://mdblist.com) | Público de RT (🍿), crítica de RT si OMDb no la tiene, plataformas donde verla (datos de EE. UU.) y el tráiler | Opcional, gratis |
 | [Wikidata](https://www.wikidata.org) | Traduce títulos en español a su ID de IMDb | No necesita |
+| [Wikipedia en español](https://es.wikipedia.org) | Sinopsis en español (resumen del artículo, licencia CC BY-SA; la ficha enlaza al artículo) | No necesita |
 | Tienda de Apple (ranking público de películas, México) | Carátula de estrenos del buscador | No necesita |
+| [Trakt](https://trakt.tv) | Nota de quienes comentan (🗣), ponderada por «me gusta» | Opcional, gratis (Client ID) |
 
 ### OMDb
 
@@ -65,6 +68,14 @@ OMDb no trae el Popcornmeter, así que se obtiene de MDBList:
    Otra opción es rellenar `EXPO_PUBLIC_MDBLIST_API_KEY` en `.env.local`.
 
 Sin esta clave la app funciona igual: el peso del público de RT se reparte entre IMDb y la crítica, y el Ranking muestra un aviso.
+
+### Trakt (comentarios 🗣)
+
+1. Crea una cuenta en <https://trakt.tv> (necesitas también una cuenta de GitHub verificada).
+2. En <https://app.trakt.tv/apps> crea una app y copia su **Client ID** (no el Client Secret).
+3. Pégalo en **Ajustes → Clave de Trakt → Guardar y probar**, o en `EXPO_PUBLIC_TRAKT_CLIENT_ID` dentro de `.env.local`.
+
+CineRank pide los 50 comentarios más votados de cada título de tu lista (y del que abres en la ficha) y calcula la nota media que les dieron sus autores, dando más peso a los comentarios con más «me gusta». Hace falta un mínimo de 3 comentarios con nota. Se guarda 7 días. Sin la clave, el peso de los comentarios se reparte entre las demás fuentes. CineRank usa Trakt, pero Trakt no la respalda ni certifica.
 
 Las fichas se guardan en caché 3 días para ahorrar consultas. En algunos estrenos muy recientes o títulos poco conocidos faltan datos de Rotten Tomatoes; en esos casos la app lo indica.
 
