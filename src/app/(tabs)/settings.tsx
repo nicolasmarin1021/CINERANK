@@ -9,7 +9,7 @@ import { SourceDot } from '@/components/scores';
 import { Palette, Radius, Spacing, TierColor } from '@/constants/theme';
 import { MDBLIST_SIGNUP_URL, testMdblistKey } from '@/lib/mdblist';
 import { OMDB_SIGNUP_URL, testApiKey } from '@/lib/omdb';
-import { weightShares, type TierKey } from '@/lib/ranking';
+import { AWARDS_BONUS_LEVELS, weightShares, type TierKey } from '@/lib/ranking';
 import { SOURCE_AUDIENCE, SOURCE_LABEL, type SourceKey, type Weights } from '@/lib/types';
 import { useApp } from '@/store/app-store';
 
@@ -36,6 +36,13 @@ const TIERS: { key: TierKey; label: string; range: string }[] = [
 ];
 
 const SOURCES: SourceKey[] = ['imdb', 'rt', 'popcorn'];
+
+const AWARDS_LABEL: Record<(typeof AWARDS_BONUS_LEVELS)[number], string> = {
+  0: 'Sin bonus',
+  3: 'Suave · +3',
+  6: 'Medio · +6',
+  10: 'Fuerte · +10',
+};
 
 type KeyStatus =
   { kind: 'idle' } | { kind: 'testing' } | { kind: 'ok'; detail?: KeyTestDetail } | { kind: 'error'; message: string };
@@ -136,9 +143,31 @@ export default function SettingsScreen() {
           <AppText variant="caption" tone="secondary">
             {activeSources.length === 0
               ? 'Activa al menos una fuente para poder calcular el ranking.'
-              : `CineScore = ${activeSources.map((s) => `${Math.round(shares[s] * 100)}% ${SOURCE_LABEL[s]}`).join(' + ')}`}
+              : `CineScore = ${activeSources.map((s) => `${Math.round(shares[s] * 100)}% ${SOURCE_LABEL[s]}`).join(' + ')}${
+                  settings.awardsBonus > 0 ? ` + premios (hasta +${settings.awardsBonus})` : ''
+                }`}
           </AppText>
         </View>
+      </Card>
+
+      {/* Bonus por premios */}
+      <Card style={{ gap: Spacing.three }}>
+        <SectionHeader title="Bonus por premios" caption="Óscar, Emmy, BAFTA, Globos de Oro y festivales" />
+        <View style={styles.chips}>
+          {AWARDS_BONUS_LEVELS.map((level) => (
+            <Chip
+              key={level}
+              label={AWARDS_LABEL[level]}
+              selected={settings.awardsBonus === level}
+              onPress={() => dispatch({ type: 'setAwardsBonus', awardsBonus: level })}
+            />
+          ))}
+        </View>
+        <AppText variant="caption" tone="secondary">
+          {settings.awardsBonus === 0
+            ? 'Los premios no cuentan en el CineScore; solo se muestran como dato.'
+            : `Suma hasta ${settings.awardsBonus} puntos y nunca resta: un título sin premios no se penaliza. Un Óscar ganado cuenta más que una nominación, y el resto de premios suma cada vez menos. Ojo: los estrenos aún no han pasado por la temporada de premios.`}
+        </AppText>
       </Card>
 
       {/* Confianza por votos */}
@@ -184,7 +213,7 @@ export default function SettingsScreen() {
         <SectionHeader title="¿Cómo se calcula?" />
         <AppText variant="caption" tone="secondary" style={{ lineHeight: 19 }}>
           {
-            '1. Cada nota se lleva a una escala de 0 a 100: IMDb × 10; la crítica de RT (% de reseñas positivas) y el público de RT (% de espectadores que la valoran bien) tal cual.\n2. Se combinan con los pesos de arriba.\n3. Si a un título le falta una fuente, su peso se reparte entre las demás y verás el aviso “Sin dato de…”.\n4. Ante un empate se prioriza el título con más fuentes y luego el que tiene más votos.\n5. “Crítica y público coinciden” compara la crítica de RT con su público (o con IMDb si falta el público).'
+            '1. Cada nota se lleva a una escala de 0 a 100: IMDb × 10; la crítica de RT (% de reseñas positivas) y el público de RT (% de espectadores que la valoran bien) tal cual.\n2. Se combinan con los pesos de arriba. Si activas el bonus por premios, se suman además puntos por Óscar, Emmy y otros premios (según OMDb), sin pasar de 100.\n3. Si a un título le falta una fuente, su peso se reparte entre las demás y verás el aviso “Sin dato de…”.\n4. Ante un empate se prioriza el título con más fuentes y luego el que tiene más votos.\n5. “Crítica y público coinciden” compara la crítica de RT con su público (o con IMDb si falta el público).'
           }
         </AppText>
         <View style={{ gap: Spacing.two }}>

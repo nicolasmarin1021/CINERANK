@@ -8,6 +8,7 @@ import { Poster } from '@/components/poster';
 import { formatRuntime, formatVotes, ScoreBadge, SourceBar, TierPill } from '@/components/scores';
 import { AppText, IconButton } from '@/components/ui';
 import { Palette, Radius, Spacing, TierColor } from '@/constants/theme';
+import { describeAwards } from '@/lib/awards';
 import type { RankedMovie } from '@/lib/ranking';
 import { SOURCE_LABEL, type RankingSettings, type SourceKey } from '@/lib/types';
 
@@ -105,6 +106,13 @@ export function DuelCard({
         </View>
 
         <View style={styles.notes}>
+          {item.awards ? (
+            <Note
+              icon="trophy"
+              accent
+              text={`${describeAwards(item.awards)}${item.awardsBonus > 0 ? ` · +${item.awardsBonus.toFixed(1)} por premios` : ''}`}
+            />
+          ) : null}
           {item.consensus ? (
             <Note
               icon={item.consensus.key === 'aligned' ? 'scale' : item.consensus.key === 'critics' ? 'critic' : 'people'}
@@ -146,11 +154,23 @@ export function DuelCard({
   );
 }
 
-function Note({ icon, text, warning }: { icon: IconName; text: string; warning?: boolean }) {
+function Note({
+  icon,
+  text,
+  warning,
+  accent,
+}: {
+  icon: IconName;
+  text: string;
+  warning?: boolean;
+  /** Dato destacado (premios), en dorado. */
+  accent?: boolean;
+}) {
+  const color = warning ? Palette.warning : accent ? Palette.accent : Palette.textMuted;
   return (
     <View style={styles.note}>
-      <Icon name={icon} size={13} color={warning ? Palette.warning : Palette.textMuted} />
-      <AppText variant="caption" tone={warning ? 'warning' : 'muted'} style={{ flex: 1 }}>
+      <Icon name={icon} size={13} color={color} />
+      <AppText variant="caption" tone={warning ? 'warning' : accent ? 'accent' : 'muted'} style={{ flex: 1 }}>
         {text}
       </AppText>
     </View>

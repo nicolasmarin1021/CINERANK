@@ -59,6 +59,7 @@ function movie(
 const noAdjust: RankingSettings = {
   weights: { imdb: 50, rt: 50, popcorn: 0 },
   voteConfidence: false,
+  awardsBonus: 0,
   minVotes: 10_000,
 };
 const thirds: RankingSettings = { ...noAdjust, weights: { imdb: 50, rt: 50, popcorn: 50 } };

@@ -10,6 +10,7 @@ import { formatRuntime, formatVotes, RatingsRow, ScoreNumber, SourceDot, TierLab
 import { Screen } from '@/components/screen';
 import { AppText, Button, Card, Divider, IconButton, Notice } from '@/components/ui';
 import { Palette, Spacing } from '@/constants/theme';
+import { describeAwards } from '@/lib/awards';
 import { getMovie, imdbUrl, OmdbError, peekMovie, rottenTomatoesSearchUrl } from '@/lib/omdb';
 import { scoreMovie } from '@/lib/ranking';
 import { SOURCE_LABEL, type Movie, type SourceKey } from '@/lib/types';
@@ -130,7 +131,7 @@ export default function MovieScreen() {
                 ? 'No hay calificaciones de las fuentes activas para calcular el CineScore.'
                 : `CineScore con ${scored.contributions
                     .map((c) => `${Math.round(c.share * 100)}% ${SOURCE_LABEL[c.source]}`)
-                    .join(' + ')}.`}
+                    .join(' + ')}${scored.awardsBonus > 0 ? ` + ${scored.awardsBonus.toFixed(1)} por premios` : ''}.`}
             </AppText>
           </View>
         </View>
@@ -157,6 +158,14 @@ export default function MovieScreen() {
                 Math.abs(scored.imdbAdjustment) >= 0.1
                   ? `: por eso su nota cuenta como ${(scored.scores.imdb ?? 0).toFixed(1)} en lugar de ${(scored.imdbRaw ?? 0).toFixed(1)}`
                   : ''
+              }.`}
+            />
+          ) : null}
+          {scored.awards ? (
+            <Fact
+              icon="trophy"
+              text={`${describeAwards(scored.awards)}${
+                scored.awardsBonus > 0 ? `: +${scored.awardsBonus.toFixed(1)} al CineScore` : ''
               }.`}
             />
           ) : null}
@@ -207,6 +216,17 @@ export default function MovieScreen() {
                     </AppText>
                   </View>
                 ))}
+                {scored.awardsBonus > 0 ? (
+                  <View style={styles.breakdownRow}>
+                    <Icon name="trophy" size={13} color={Palette.accent} />
+                    <AppText variant="caption" tone="secondary" style={{ flex: 1 }}>
+                      Bonus por premios
+                    </AppText>
+                    <AppText variant="number" style={{ fontSize: 14, color: Palette.accent }}>
+                      +{scored.awardsBonus.toFixed(1)}
+                    </AppText>
+                  </View>
+                ) : null}
                 <Divider />
                 <View style={styles.breakdownRow}>
                   <AppText variant="label" style={{ flex: 1 }}>
@@ -237,7 +257,7 @@ export default function MovieScreen() {
           ['Estreno', movie.released],
           ['País', movie.country],
           ['Idioma', movie.language],
-          ['Premios', movie.awards],
+          ['Premios', describeAwards(scored.awards) ?? movie.awards],
         ]
           .filter((row): row is [string, string] => !!row[1])
           .map(([label, value]) => (

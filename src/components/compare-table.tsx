@@ -6,6 +6,7 @@ import { Poster } from '@/components/poster';
 import { formatRuntime, formatScore, formatVotes, SourceDot } from '@/components/scores';
 import { AppText } from '@/components/ui';
 import { Palette, Radius, Spacing, TierColor } from '@/constants/theme';
+import { awardsShort, awardsStrength } from '@/lib/awards';
 import { bestIndexes, type RankedMovie } from '@/lib/ranking';
 import type { SourceKey } from '@/lib/types';
 
@@ -65,6 +66,13 @@ export function CompareTable({ items, showAudience }: { items: RankedMovie[]; sh
       source: 'popcorn',
       values: items.map((i) => i.movie.ratings.popcorn),
       render: (i) => (i.movie.ratings.popcorn == null ? '—' : `${i.movie.ratings.popcorn}%`),
+      highlight: true,
+    },
+    {
+      key: 'awards',
+      label: '🏆 Premios',
+      values: items.map((i) => (i.awards ? awardsStrength(i.awards) : null)),
+      render: (i) => awardsShort(i.awards) ?? '—',
       highlight: true,
     },
     {

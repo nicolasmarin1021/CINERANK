@@ -16,15 +16,16 @@ Hecha con Expo SDK 58 (React Native 0.88, Expo Router, TypeScript).
 - **Ficha**: portada a pantalla completa, las tres notas, el desglose del CineScore, si la crítica y el público coinciden o no, la sinopsis, el reparto y enlaces a IMDb y Rotten Tomatoes.
 
 El diseño usa una paleta inspirada en los teatros de Broadway (escenario negro, texto marfil, un único acento dorado y el rojo del telón) definida en [`src/constants/theme.ts`](src/constants/theme.ts).
-- **Ajustes**: cuánto pesa cada fuente (con presets como “Manda la crítica” o “Manda el público”), la corrección por número de votos y tu clave de OMDb.
+- **Ajustes**: cuánto pesa cada fuente (con presets como “Manda la crítica” o “Manda el público”), el bonus por premios, la corrección por número de votos y tus claves de OMDb y MDBList.
 
 ## Cómo se calcula el CineScore
 
 1. Cada fuente se pasa a una escala de 0 a 100: IMDb × 10; la crítica de RT (% de reseñas positivas) y el público de RT (% de espectadores que la valoran bien) tal cual.
 2. **Corrección por votos** (opcional, viene activada): a la nota de IMDb se le aplica un promedio bayesiano, `(v·R + m·C) / (v + m)` con C = 6,5. Así, una película con 3.000 votos y un 7,9 no supera a un clásico con un millón de votos. `m` se elige en Ajustes: 2.500, 10.000 o 25.000 votos.
 3. Las fuentes se combinan con los pesos que elijas. Por defecto, un tercio cada una: IMDb, RT crítica y RT público.
-4. Si a un título le falta una fuente, su peso se reparte entre las demás y la tarjeta muestra el aviso “Sin dato de…”.
-5. Desempates: gana el título con más fuentes disponibles y, después, el que tiene más votos en IMDb.
+4. **Bonus por premios**: se suman puntos por Óscar, Emmy, BAFTA, Globos de Oro y el resto de premios que lista OMDb. Nunca resta, así que un título sin premios no se penaliza. Un Óscar ganado cuenta más que una nominación y los demás premios suman en escala logarítmica. En Ajustes eliges el máximo: sin bonus, +3, +6 (por defecto) o +10. El CineScore no pasa de 100.
+5. Si a un título le falta una fuente, su peso se reparte entre las demás y la tarjeta muestra el aviso “Sin dato de…”.
+6. Desempates: gana el título con más fuentes disponibles y, después, el que tiene más votos en IMDb.
 
 | CineScore | Nivel |
 |---|---|

@@ -8,9 +8,12 @@
  * 3. Combina las fuentes con los pesos elegidos. Si a un título le falta una
  *    fuente, los pesos se reparten entre las fuentes disponibles y el título
  *    se marca como "datos parciales".
+ * 4. Suma un bonus por premios (Óscar, Emmy…), que nunca resta: un título sin
+ *    premios no se penaliza.
  *
  * Archivo puro (sin React Native) para poder probarlo con `node --test`.
  */
+import { awardsStrength, parseAwards, type AwardsInfo } from './awards.ts';
 import type { Movie, RankingSettings, SortKey, SourceKey, Weights } from './types';
 
 const KEYS: readonly SourceKey[] = ['imdb', 'rt', 'popcorn'];
@@ -28,7 +31,11 @@ export const DEFAULT_SETTINGS: RankingSettings = {
   weights: { imdb: 50, rt: 50, popcorn: 50 },
   voteConfidence: true,
   minVotes: 10_000,
+  awardsBonus: 6,
 };
+
+/** Niveles del bonus por premios que se ofrecen en Ajustes (puntos máximos). */
+export const AWARDS_BONUS_LEVELS = [0, 3, 6, 10] as const;
 
 export type TierKey = 'essential' | 'great' | 'good' | 'mixed' | 'avoid';
 
@@ -64,8 +71,14 @@ export interface ScoredMovie {
   imdbRaw: number | null;
   /** Cuántos puntos movió la corrección por votos (negativo = la bajó). */
   imdbAdjustment: number;
-  /** CineScore 0–100 con un decimal, o null si no hay datos con peso. */
+  /** CineScore 0–100 con un decimal (incluye el bonus por premios), o null si no hay datos con peso. */
   score: number | null;
+  /** Media ponderada de las fuentes, antes del bonus por premios. */
+  baseScore: number | null;
+  /** Premios según OMDb, o null si no tiene. */
+  awards: AwardsInfo | null;
+  /** Puntos sumados por premios (0 si no tiene o si el bonus está desactivado). */
+  awardsBonus: number;
   contributions: Contribution[];
   /** Fuentes con peso > 0 de las que no hay dato. */
   missing: SourceKey[];
@@ -144,7 +157,11 @@ export function scoreMovie(movie: Movie, settings: RankingSettings): ScoredMovie
     return { source, value, share, points: value * share };
   });
 
-  const score = availableWeight > 0 ? round1(contributions.reduce((acc, c) => acc + c.points, 0)) : null;
+  const baseScore = availableWeight > 0 ? round1(contributions.reduce((acc, c) => acc + c.points, 0)) : null;
+  const awards = parseAwards(movie.awards);
+  const awardsBonus =
+    baseScore == null ? 0 : round1(Math.max(0, settings.awardsBonus ?? 0) * awardsStrength(awards));
+  const score = baseScore == null ? null : Math.min(100, round1(baseScore + awardsBonus));
 
   return {
     movie,
@@ -152,6 +169,9 @@ export function scoreMovie(movie: Movie, settings: RankingSettings): ScoredMovie
     imdbRaw,
     imdbAdjustment: imdb != null && imdbRaw != null ? round1(imdb - imdbRaw) : 0,
     score,
+    baseScore,
+    awards,
+    awardsBonus,
     contributions,
     missing,
     coverage: configuredWeight > 0 ? availableWeight / configuredWeight : 0,

@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, use, useEffect, useReducer, type ReactNode } from 'react';
 
 import { keepExisting, toggleId } from '@/lib/compare';
-import { DEFAULT_SETTINGS } from '@/lib/ranking';
+import { AWARDS_BONUS_LEVELS, DEFAULT_SETTINGS } from '@/lib/ranking';
 import { upgradeMovie } from '@/lib/omdb-parse';
 import type { ApiKeys, MediaType, Movie, RankingSettings, SortKey, Weights } from '@/lib/types';
 
@@ -44,6 +44,7 @@ type Action =
   | { type: 'setWeights'; weights: Weights }
   | { type: 'setVoteConfidence'; enabled: boolean }
   | { type: 'setMinVotes'; minVotes: number }
+  | { type: 'setAwardsBonus'; awardsBonus: number }
   | { type: 'resetSettings' }
   | { type: 'addCandidate'; movie: Movie }
   | { type: 'removeCandidate'; imdbID: string }
@@ -87,6 +88,10 @@ function reducer(state: AppState, action: Action): AppState {
             rt: savedWeights.rt ?? defaults.rt,
             popcorn: savedWeights.popcorn ?? defaults.popcorn,
           },
+          // Versiones anteriores no tenían bonus por premios: se usa el valor por defecto.
+          awardsBonus: (AWARDS_BONUS_LEVELS as readonly number[]).includes(saved.settings?.awardsBonus as number)
+            ? (saved.settings?.awardsBonus as number)
+            : DEFAULT_SETTINGS.awardsBonus,
         },
         candidates,
         compareIds: keepExisting(saved.compareIds, candidates),
@@ -104,6 +109,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, settings: { ...state.settings, voteConfidence: action.enabled } };
     case 'setMinVotes':
       return { ...state, settings: { ...state.settings, minVotes: action.minVotes } };
+    case 'setAwardsBonus':
+      return { ...state, settings: { ...state.settings, awardsBonus: action.awardsBonus } };
     case 'resetSettings':
       return { ...state, settings: DEFAULT_SETTINGS };
     case 'addCandidate': {

@@ -96,6 +96,8 @@ export interface RankingSettings {
   voteConfidence: boolean;
   /** Votos necesarios para confiar plenamente en la nota IMDb. */
   minVotes: number;
+  /** Puntos máximos que suman los premios (Óscar, Emmy…) al CineScore. 0 = sin bonus. */
+  awardsBonus: number;
 }
 
 export type SortKey = 'score' | SourceKey;
