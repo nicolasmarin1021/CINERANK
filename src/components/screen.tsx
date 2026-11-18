@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View, type ScrollViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BottomTabInset, MaxContentWidth, Palette, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Palette, Spacing } from '@/constants/theme';
+import { useTabBarLayout } from '@/hooks/use-tab-bar-layout';
 
 /**
  * Contenedor de pantalla con scroll que respeta zonas seguras y la barra
@@ -26,8 +27,9 @@ export function Screen({
   centered?: boolean;
 }) {
   const insets = useSafeAreaInsets();
+  const { clearance } = useTabBarLayout();
   const immersive = hero != null;
-  const bottom = insets.bottom + (withTabBar ? BottomTabInset : 0) + Spacing.five + extraBottom;
+  const bottom = (withTabBar ? clearance : insets.bottom) + Spacing.five + extraBottom;
   const top = immersive ? 0 : (withTabBar ? insets.top : 0) + Spacing.four;
 
   return (

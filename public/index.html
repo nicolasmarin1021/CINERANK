@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es" style="background-color: #0a0908">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <!-- viewport-fit=cover: la app ocupa toda la pantalla y respeta las zonas seguras (notch, barra de inicio). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+    <title>%WEB_TITLE%</title>
+    <meta name="description" content="Compara películas con IMDb y Rotten Tomatoes antes de elegir qué ver." />
+    <!-- Colores del navegador y de la barra de estado: el negro del escenario, sin bordes blancos. -->
+    <meta name="theme-color" content="#0a0908" />
+    <meta name="color-scheme" content="dark" />
+    <!-- iPhone: al añadirla a la pantalla de inicio se abre como app, con la barra de estado translúcida sobre el fondo oscuro. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="CineRank" />
+    <!-- Estilos base de react-native-web (https://necolas.github.io/react-native-web/docs/setup/#root-element). -->
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+        background-color: #0a0908;
+        color-scheme: dark;
+      }
+      /* La página nunca se desplaza ni rebota: cada pantalla tiene su propio scroll. */
+      html,
+      body {
+        overscroll-behavior: none;
+      }
+      body {
+        overflow: hidden;
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>Necesitas activar JavaScript para usar CineRank.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

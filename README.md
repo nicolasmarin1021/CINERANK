@@ -105,6 +105,20 @@ npx expo start
 - **Emulador Android**: pulsa `a` en la terminal (requiere Android Studio).
 - **Navegador** (vista previa rápida): pulsa `w`.
 
+## Versión web publicada
+
+CineRank está publicada en **<https://cinerank.expo.app>** (Expo Hosting, cuenta `nicolasm21`): se abre en el navegador de cualquier teléfono o computador, sin instalar nada, y se puede «Añadir a pantalla de inicio». Cada persona pone sus propias claves en ⚙️ Ajustes (se guardan solo en su navegador).
+
+Para publicar los cambios:
+
+```bash
+npx expo export --platform web
+```
+
+```bash
+npx eas-cli@latest deploy --prod
+```
+
 ## Comprobaciones
 
 ```bash

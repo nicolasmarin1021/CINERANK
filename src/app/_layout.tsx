@@ -4,6 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import { ViewportFix } from '@/components/viewport-fix';
 import { Palette } from '@/constants/theme';
 import { AppProvider, useApp } from '@/store/app-store';
 
@@ -38,17 +39,20 @@ export default function RootLayout() {
       <ThemeProvider value={theme}>
         <StatusBar style="light" />
         <HideSplashWhenReady fontsReady={fontsLoaded || fontError != null} />
-        <Stack
-          screenOptions={{
-            headerStyle: { backgroundColor: Palette.background },
-            headerTintColor: Palette.text,
-            headerShadowVisible: false,
-            contentStyle: { backgroundColor: Palette.background },
-          }}>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="movie/[id]" options={{ title: 'Ficha', headerBackTitle: 'Volver' }} />
-          <Stack.Screen name="settings" options={{ title: 'Ajustes', headerBackTitle: 'Volver' }} />
-        </Stack>
+        {/* En la app de inicio del iPhone, que ocupe toda la pantalla (ver viewport-fix.web.tsx). */}
+        <ViewportFix>
+          <Stack
+            screenOptions={{
+              headerStyle: { backgroundColor: Palette.background },
+              headerTintColor: Palette.text,
+              headerShadowVisible: false,
+              contentStyle: { backgroundColor: Palette.background },
+            }}>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="movie/[id]" options={{ title: 'Ficha', headerBackTitle: 'Volver' }} />
+            <Stack.Screen name="settings" options={{ title: 'Ajustes', headerBackTitle: 'Volver' }} />
+          </Stack>
+        </ViewportFix>
       </ThemeProvider>
     </AppProvider>
   );

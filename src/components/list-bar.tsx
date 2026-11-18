@@ -1,10 +1,10 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui';
-import { BottomTabInset, MaxContentWidth, Palette, Radius, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Palette, Radius, Spacing } from '@/constants/theme';
+import { useTabBarLayout } from '@/hooks/use-tab-bar-layout';
 
 /** Alto que ocupa la barra, para dejar ese espacio libre al final del scroll. */
 export const LIST_BAR_SPACE = 76;
@@ -14,13 +14,13 @@ export const LIST_BAR_SPACE = 76;
  * títulos ya no desplaza los resultados de búsqueda.
  */
 export function ListBar({ count }: { count: number }) {
-  const insets = useSafeAreaInsets();
+  const { clearance } = useTabBarLayout();
   return (
     <Animated.View
       entering={FadeInDown.duration(220)}
       exiting={FadeOutDown.duration(150)}
       pointerEvents="box-none"
-      style={[styles.wrap, { bottom: insets.bottom + BottomTabInset + Spacing.two }]}>
+      style={[styles.wrap, { bottom: clearance + Spacing.two }]}>
       <Pressable
         onPress={() => router.navigate('/ranking')}
         accessibilityRole="button"

@@ -74,8 +74,14 @@ export const Radius = {
   pill: 999,
 } as const;
 
-/** Espacio que ocupa la barra de pestañas nativa sobre el contenido. */
-export const BottomTabInset = Platform.select({ ios: 50, android: 80, web: 60 }) ?? 0;
+/** Espacio que ocupa la barra de pestañas nativa sobre el contenido (además de la zona segura). */
+export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
+
+/**
+ * Barra flotante de la web con las medidas de la de iOS 26 (62 de alto y unos 20 de margen
+ * a cada lado). Su distancia al borde inferior la calcula `useTabBarLayout`.
+ */
+export const WebTabBar = { height: 62, sideMargin: 20, maxWidth: 560 } as const;
 export const MaxContentWidth = 720;
 
 /** Tipografía teatral (art déco de marquesina) para el logo. Se carga en app/_layout.tsx. */
