@@ -1,68 +1,29 @@
-import { StyleSheet, View } from 'react-native';
+import { Image } from 'expo-image';
+import { useWindowDimensions } from 'react-native';
 
-import { Icon } from '@/components/icon';
-import { AppText } from '@/components/ui';
-import { Fonts, Palette, Radius, Spacing } from '@/constants/theme';
+// Las imágenes del proyecto se cargan con require (Metro las empaqueta para cada plataforma).
+const logoSource = require('@/assets/images/cinerank-logo.png');
 
-const BULBS = 13;
-
-/** Fila de bombillas de marquesina (alternan marfil y oro). */
-function Bulbs() {
-  return (
-    <View style={styles.bulbs}>
-      {Array.from({ length: BULBS }, (_, i) => (
-        <View key={i} style={[styles.bulb, { backgroundColor: i % 2 ? Palette.accent : Palette.text }]} />
-      ))}
-    </View>
-  );
-}
+/** Proporción del archivo (587 × 478): carrete con estrella, «CINERANK» y el lema. */
+const RATIO = 587 / 478;
 
 /**
- * Logo de CineRank: máscaras de teatro y el nombre en letras art déco
- * dentro de una marquesina con bombillas, como la de un teatro de Broadway.
+ * Logo de la marca: carrete dorado con estrella, el nombre y «Descubre · Elige · Disfruta».
+ * Mide como mucho 160 de alto (unos 197 de ancho: la resolución del archivo en un iPhone,
+ * que tiene 3 píxeles por punto) y el 20 % del alto de la pantalla; `compact` lo reduce cuando
+ * debajo hay un aviso (p. ej. falta la clave), para que todo quepa sobre la carátula de estrenos.
  */
-export function Logo() {
+export function Logo({ compact }: { compact?: boolean }) {
+  const { height: windowHeight } = useWindowDimensions();
+  const height = Math.round(compact ? Math.min(120, windowHeight * 0.14) : Math.min(160, windowHeight * 0.2));
   return (
-    <View style={styles.wrap} accessible accessibilityRole="header" accessibilityLabel="CineRank">
-      <View style={styles.mark}>
-        <Icon name="masks" size={20} color={Palette.onLight} />
-      </View>
-      <View style={styles.marquee}>
-        <Bulbs />
-        <AppText style={styles.word}>CINERANK</AppText>
-        <Bulbs />
-      </View>
-    </View>
+    <Image
+      source={logoSource}
+      style={{ width: Math.round(height * RATIO), height, alignSelf: 'center' }}
+      contentFit="contain"
+      accessible
+      accessibilityRole="header"
+      accessibilityLabel="CineRank. Descubre, elige, disfruta"
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: { alignItems: 'center', gap: Spacing.three },
-  mark: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Palette.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  marquee: {
-    paddingHorizontal: Spacing.five,
-    paddingVertical: Spacing.two,
-    gap: 6,
-    borderRadius: Radius.md,
-    borderWidth: 1.5,
-    borderColor: Palette.accent,
-    backgroundColor: 'rgba(178, 30, 53, 0.18)',
-  },
-  bulbs: { flexDirection: 'row', justifyContent: 'space-between' },
-  bulb: { width: 4, height: 4, borderRadius: 2, opacity: 0.9 },
-  word: {
-    fontFamily: Fonts.marquee,
-    fontSize: 34,
-    lineHeight: 42,
-    letterSpacing: 3,
-    color: Palette.accent,
-    textAlign: 'center',
-  },
-});

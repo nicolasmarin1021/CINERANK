@@ -159,7 +159,7 @@ export default function SearchScreen() {
           pointerEvents="box-none"
           // El buscador se centra en el hueco entre el logo y el borde superior de la carátula.
           style={[styles.idleContent, { paddingTop: insets.top + Spacing.five, paddingBottom: wallHeight }]}>
-          <Logo />
+          <Logo compact={missingKey != null} />
           <View pointerEvents="box-none" style={styles.idle}>
             <AppText variant="title" style={{ textAlign: 'center' }}>
               ¿Qué vas a ver hoy?

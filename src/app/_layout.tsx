@@ -1,4 +1,3 @@
-import { Limelight_400Regular, useFonts } from '@expo-google-fonts/limelight';
 import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -22,23 +21,21 @@ const theme = {
   },
 };
 
-/** Oculta el splash cuando los datos guardados y la tipografía del logo ya están cargados. */
-function HideSplashWhenReady({ fontsReady }: { fontsReady: boolean }) {
+/** Oculta el splash cuando los datos guardados ya están cargados. */
+function HideSplashWhenReady() {
   const { state } = useApp();
   useEffect(() => {
-    if (state.hydrated && fontsReady) SplashScreen.hideAsync();
-  }, [state.hydrated, fontsReady]);
+    if (state.hydrated) SplashScreen.hideAsync();
+  }, [state.hydrated]);
   return null;
 }
 
 export default function RootLayout() {
-  // Si la fuente falla, la app sigue con la tipografía del sistema.
-  const [fontsLoaded, fontError] = useFonts({ Limelight_400Regular });
   return (
     <AppProvider>
       <ThemeProvider value={theme}>
         <StatusBar style="light" />
-        <HideSplashWhenReady fontsReady={fontsLoaded || fontError != null} />
+        <HideSplashWhenReady />
         {/* En la app de inicio del iPhone, que ocupe toda la pantalla (ver viewport-fix.web.tsx). */}
         <ViewportFix>
           <Stack

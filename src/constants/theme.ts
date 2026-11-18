@@ -83,6 +83,3 @@ export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
  */
 export const WebTabBar = { height: 62, sideMargin: 20, maxWidth: 560 } as const;
 export const MaxContentWidth = 720;
-
-/** Tipografía teatral (art déco de marquesina) para el logo. Se carga en app/_layout.tsx. */
-export const Fonts = { marquee: 'Limelight_400Regular' } as const;
