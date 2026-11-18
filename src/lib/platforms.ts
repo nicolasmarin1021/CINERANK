@@ -41,10 +41,25 @@ const RULES: Rule[] = [
   { key: 'youtube', name: 'YouTube', short: '▶', bg: '#FF0000', fg: '#FFFFFF', kind: 'rent', ids: [192], match: /^youtube$/i },
 ];
 
+/** Los "canales" (p. ej. "HBO Max Amazon Channel") repiten un servicio que ya aparece por sí solo. */
+const isChannel = (p: WatchProvider) => /channel/i.test(p.name);
+
 function ruleFor(p: WatchProvider): Rule | undefined {
-  // Los "canales" (p. ej. "HBO Max Amazon Channel") repiten un servicio que ya aparece por sí solo.
-  if (/channel/i.test(p.name)) return undefined;
+  if (isChannel(p)) return undefined;
   return RULES.find((r) => r.ids.includes(p.id)) ?? RULES.find((r) => r.match.test(p.name));
+}
+
+/**
+ * Plataformas que no tienen insignia propia (p. ej. Claro video), sin canales ni repetidas,
+ * para nombrarlas aparte.
+ */
+export function otherPlatforms(providers: readonly WatchProvider[]): string[] {
+  const names: string[] = [];
+  for (const p of providers) {
+    const name = p.name.replace(/\s+(standard|basic)?\s*with\s+ads$/i, '').trim();
+    if (!isChannel(p) && !ruleFor(p) && !names.includes(name)) names.push(name);
+  }
+  return names;
 }
 
 /**

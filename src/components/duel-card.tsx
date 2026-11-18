@@ -57,8 +57,8 @@ export function DuelCard({
   const visibleSources = SOURCES.filter((s) => item.scores[s] != null || ((settings.weights[s] ?? 0) > 0 && enabled(s)));
   const missing = item.missing.filter(enabled);
 
-  // El botón de quitar es hermano (no hijo) del área pulsable: en web un
-  // <button> no puede contener otro <button>.
+  // El botón de quitar y los enlaces a las plataformas son hermanos (no hijos) del área
+  // pulsable: un botón no puede contener otro botón ni enlace.
   return (
     <Animated.View
       layout={LinearTransition.duration(250)}
@@ -68,7 +68,7 @@ export function DuelCard({
         accessibilityRole="button"
         accessibilityLabel={`Puesto ${item.rank ?? 'sin puesto'}: ${movie.title}`}
         style={({ pressed }) => [styles.content, pressed && { opacity: 0.85 }]}>
-        {/* Esquina superior: etiqueta del ganador a la izquierda, plataformas a la derecha (antes de la ✕). */}
+        {/* Esquina superior: etiqueta del ganador a la izquierda; a la derecha quedan las plataformas (ver abajo). */}
         <View style={styles.topRow}>
           {highlight ? (
             <View style={styles.winnerTag}>
@@ -77,10 +77,7 @@ export function DuelCard({
                 TU MEJOR OPCIÓN
               </AppText>
             </View>
-          ) : (
-            <View />
-          )}
-          <PlatformBadges providers={movie.providers} />
+          ) : null}
         </View>
 
         <View style={styles.header}>
@@ -165,6 +162,10 @@ export function DuelCard({
           ) : null}
         </View>
       </Pressable>
+      {/* Plataformas en la esquina superior, antes de la ✕: cada icono abre el título en ella. */}
+      <View style={styles.platforms}>
+        <PlatformBadges movie={movie} />
+      </View>
       <View style={styles.close}>
         <IconButton
           icon="close"
@@ -210,12 +211,13 @@ const styles = StyleSheet.create({
   },
   content: { padding: Spacing.four, gap: Spacing.three },
   close: { position: 'absolute', top: Spacing.two, right: Spacing.two },
+  // Misma altura que la fila superior de la tarjeta (relleno de 16 y 28 de alto), a la izquierda de la ✕.
+  platforms: { position: 'absolute', top: Spacing.four, right: Spacing.four + 30, height: 28, justifyContent: 'center' },
   topRow: {
     minHeight: 28,
     marginRight: 30,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: Spacing.two,
   },
   winnerTag: { flexDirection: 'row', alignItems: 'center', gap: 6 },

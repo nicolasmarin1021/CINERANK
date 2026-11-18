@@ -12,7 +12,8 @@ Hecha con Expo SDK 58 (React Native 0.88, Expo Router, TypeScript).
   - **Ordenar y filtrar**: ordena por CineScore, IMDb, crítica o público de RT, y filtra por duración (hasta 1 h 30, 2 h o 2 h 30).
   - **Balanza**: marca los títulos que quieres enfrentar a fondo en «¿Cuál es mejor?».
   - **Tu plan de hoy**: eliges qué te apetece (reír, adrenalina, emocionarte, pensar, pasar miedo, algo ligero) y con quién la ves (solo, en pareja, con amigos, en familia). El CineScore no cambia: aparece una puntuación «Para hoy» que resta hasta 15 puntos a lo que no encaja según género, clasificación por edad y duración, con el motivo a la vista. Vale hasta medianoche.
-- **¿Cuál es mejor?**: solo los títulos que marcaste, cara a cara: puesto, CineScore en recuadro, nivel, barras de color de IMDb, crítica y público, quién gana y, en la esquina, en qué plataformas está (Netflix, HBO Max, Prime Video…).
+- **¿Cuál es mejor?**: solo los títulos que marcaste, cara a cara: puesto, CineScore en recuadro, nivel, barras de color de IMDb, crítica y público, quién gana y, en la esquina, en qué plataformas está (Netflix, HBO Max, Prime Video…). Cada icono abre el título en esa plataforma (en el teléfono, en su app).
+- **Dónde verla** (en la ficha): las plataformas de tu país (el de «País del catálogo» en Explorar) con su nombre; cada una abre el título directamente si Wikidata tiene su identificador en esa plataforma, o lo busca dentro de ella si no. Con la clave de TMDB los datos son de tu país (JustWatch); sin ella, de EE. UU. (MDBList).
   - Desliza hacia abajo, o pulsa **Actualizar notas**, para volver a descargar las calificaciones.
 - **Ficha**: portada a pantalla completa, el **tráiler** (se abre dentro de la app; viene de MDBList, y si no hay, un atajo para buscarlo en YouTube), las notas, la sinopsis en español (resumen de Wikipedia; si no hay artículo, la original en inglés), el desglose del CineScore, si la crítica y el público coinciden o no, la sinopsis, el reparto y enlaces a IMDb y Rotten Tomatoes.
 
@@ -47,10 +48,10 @@ IMDb y Rotten Tomatoes no ofrecen una API pública gratuita, así que CineRank c
 |---|---|---|
 | [OMDb API](https://www.omdbapi.com) | Ficha, nota y votos de IMDb, crítica de RT (🍅) | Obligatoria, gratis |
 | [MDBList](https://mdblist.com) | Público de RT (🍿), crítica de RT si OMDb no la tiene, plataformas donde verla (datos de EE. UU.) y el tráiler | Opcional, gratis |
-| [Wikidata](https://www.wikidata.org) | Traduce títulos en español a su ID de IMDb | No necesita |
+| [Wikidata](https://www.wikidata.org) | Traduce títulos en español a su ID de IMDb, y da el ID de cada título en Netflix, Disney+, HBO Max, Apple TV, Prime Video… para abrirlo directamente | No necesita |
 | [Wikipedia en español](https://es.wikipedia.org) | Sinopsis en español (resumen del artículo, licencia CC BY-SA; la ficha enlaza al artículo) | No necesita |
 | Tienda de Apple (ranking público de películas, México) | Carátula de estrenos del buscador | No necesita |
-| [TMDB](https://www.themoviedb.org) | Catálogo de cada plataforma por país para Explorar (plataformas de JustWatch), con títulos y pósters en español | Opcional, gratis |
+| [TMDB](https://www.themoviedb.org) | Catálogo de cada plataforma por país para Explorar, y en qué plataformas de tu país está cada título (datos de JustWatch), con títulos y pósters en español | Opcional, gratis |
 | [Trakt](https://trakt.tv) | Nota de quienes comentan (🗣), ponderada por «me gusta» | Opcional, gratis (Client ID) |
 
 ### OMDb

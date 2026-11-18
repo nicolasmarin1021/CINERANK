@@ -80,6 +80,66 @@ export function parseProviders(json: unknown, region: string, max = 16): Streami
     .map((p) => ({ id: num(p.provider_id)!, name: str(p.provider_name), logoPath: str(p.logo_path) || null }));
 }
 
+/** `/find/{imdb}?external_source=imdb_id` → ID de TMDB y si es película o serie. */
+export function parseFindResult(
+  json: unknown,
+  type: 'movie' | 'series',
+): { id: number; media: 'movie' | 'tv' } | null {
+  const d = (json ?? {}) as { movie_results?: unknown; tv_results?: unknown };
+  const first = (v: unknown) => (Array.isArray(v) ? num((v[0] as Record<string, unknown> | undefined)?.id) : null);
+  const movie = first(d.movie_results);
+  const tv = first(d.tv_results);
+  const asMovie = movie != null ? { id: movie, media: 'movie' as const } : null;
+  const asTv = tv != null ? { id: tv, media: 'tv' as const } : null;
+  return type === 'series' ? (asTv ?? asMovie) : (asMovie ?? asTv);
+}
+
+export interface TitleProvider {
+  id: number;
+  name: string;
+  logoPath: string | null;
+  /** Suscripción, gratis o con anuncios ('stream'); alquiler o compra ('rent'). */
+  category: 'stream' | 'rent';
+}
+
+export interface TitleProviders {
+  providers: TitleProvider[];
+  /** Página de TMDB con todas las opciones del país (con enlaces de JustWatch). */
+  link: string | null;
+}
+
+const TITLE_GROUPS = [
+  ['flatrate', 'stream'],
+  ['free', 'stream'],
+  ['ads', 'stream'],
+  ['rent', 'rent'],
+  ['buy', 'rent'],
+] as const;
+
+/**
+ * `/movie/{id}/watch/providers` → plataformas del título en un país (datos de JustWatch),
+ * primero las de suscripción y dentro de cada grupo en el orden de JustWatch.
+ */
+export function parseTitleProviders(json: unknown, region: string): TitleProviders {
+  const results = ((json ?? {}) as { results?: unknown }).results as Record<string, unknown> | undefined;
+  const country = results?.[region] as Record<string, unknown> | undefined;
+  if (!country || typeof country !== 'object') return { providers: [], link: null };
+  const seen = new Set<number>();
+  const providers: TitleProvider[] = [];
+  for (const [field, category] of TITLE_GROUPS) {
+    const list = Array.isArray(country[field]) ? (country[field] as Record<string, unknown>[]) : [];
+    const sorted = [...list].sort((a, b) => (num(a.display_priority) ?? 999) - (num(b.display_priority) ?? 999));
+    for (const p of sorted) {
+      const id = num(p.provider_id);
+      const name = str(p.provider_name).trim();
+      if (id == null || !name || seen.has(id)) continue;
+      seen.add(id);
+      providers.push({ id, name, logoPath: str(p.logo_path) || null, category });
+    }
+  }
+  return { providers, link: str(country.link) || null };
+}
+
 /** URL completa de una imagen de TMDB (pósters: w342; logos: w92). */
 export function tmdbImage(path: string | null, size: 'w92' | 'w185' | 'w342' | 'w500' = 'w342'): string | null {
   return path ? `https://image.tmdb.org/t/p/${size}${path}` : null;

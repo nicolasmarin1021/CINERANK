@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, type IconName } from '@/components/icon';
+import { WhereToWatch } from '@/components/platform-badges';
 import { Backdrop } from '@/components/poster';
 import { formatRuntime, formatVotes, RatingsRow, ScoreNumber, SourceDot, TierLabel } from '@/components/scores';
 import { Screen } from '@/components/screen';
@@ -160,6 +161,8 @@ export default function MovieScreen() {
       </View>
 
       <TrailerCard movie={movie} hasMdblistKey={!!mdblist} />
+
+      <WhereToWatch movie={movie} />
 
       <View style={{ gap: Spacing.four }}>
         <View style={styles.scoreRow}>

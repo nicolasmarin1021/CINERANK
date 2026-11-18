@@ -8,6 +8,7 @@ import { Screen } from '@/components/screen';
 import { AppText, Button, EmptyState, Notice } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useEnrichCandidates } from '@/hooks/use-enrich-candidates';
+import { REGIONS } from '@/lib/explore';
 import { isTechnicalTie, rankMovies } from '@/lib/ranking';
 import { useActivePlan, useApp } from '@/store/app-store';
 
@@ -20,6 +21,8 @@ export default function CompareScreen() {
   const { settings, candidates, compareIds } = state;
   useEnrichCandidates();
   const audienceEnabled = state.mdblistKey.length > 0;
+  // Las plataformas son las del país elegido en Explorar.
+  const regionName = REGIONS.find((r) => r.code === state.explore.region)?.name ?? state.explore.region;
   const selected = candidates.filter((m) => compareIds.includes(m.imdbID));
   // Con un plan de hoy se ordena «Para hoy»; sin plan, por CineScore.
   const plan = useActivePlan();
@@ -106,9 +109,14 @@ export default function CompareScreen() {
         ))}
       </View>
 
-      {audienceEnabled ? (
+      {state.tmdbKey ? (
         <AppText variant="caption" tone="muted" style={{ textAlign: 'center' }}>
-          Las plataformas vienen de MDBList y reflejan la disponibilidad en EE. UU.; en tu país pueden ser otras.
+          Plataformas de {regionName} según JustWatch. Toca un icono para abrir el título en ella.
+        </AppText>
+      ) : audienceEnabled ? (
+        <AppText variant="caption" tone="muted" style={{ textAlign: 'center' }}>
+          Plataformas de EE. UU. según MDBList (toca un icono para abrir el título). Con tu clave de TMDB
+          verías las de {regionName}.
         </AppText>
       ) : null}
 
