@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, use, useEffect, useReducer, type ReactNode } from 'react';
 
 import { keepExisting, toggleId } from '@/lib/compare';
+import { DEFAULT_EXPLORE, regionFromLocale, sanitizeExplore, type ExploreFilters } from '@/lib/explore';
 import { activePlan, sanitizePlan, todayKey, type Company, type Mood, type Plan, type StoredPlan } from '@/lib/plan';
 import { AWARDS_BONUS_LEVELS, DEFAULT_SETTINGS } from '@/lib/ranking';
 import { upgradeMovie } from '@/lib/omdb-parse';
@@ -20,6 +21,16 @@ export const MAX_CANDIDATES = 12;
 const ENV_API_KEY = process.env.EXPO_PUBLIC_OMDB_API_KEY ?? '';
 const ENV_MDBLIST_KEY = process.env.EXPO_PUBLIC_MDBLIST_API_KEY ?? '';
 const ENV_TRAKT_KEY = process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID ?? '';
+const ENV_TMDB_KEY = process.env.EXPO_PUBLIC_TMDB_API_KEY ?? '';
+
+/** País del catálogo por defecto según el idioma del teléfono ("es-CO" → Colombia). */
+function deviceRegion() {
+  try {
+    return regionFromLocale(Intl.DateTimeFormat().resolvedOptions().locale);
+  } catch {
+    return 'MX';
+  }
+}
 
 export type RuntimeFilter = 0 | 90 | 120 | 150;
 
@@ -30,6 +41,10 @@ export interface AppState {
   mdblistKey: string;
   /** Client ID de Trakt (opcional): aporta la nota de quienes comentan. */
   traktKey: string;
+  /** Clave de TMDB (opcional): catálogo por plataforma para «Explorar». */
+  tmdbKey: string;
+  /** Filtros de «Explorar». */
+  explore: ExploreFilters;
   settings: RankingSettings;
   candidates: Movie[];
   /** Títulos de la lista elegidos para enfrentarlos en «¿Cuál es mejor?». */
@@ -48,6 +63,8 @@ type Action =
   | { type: 'setApiKey'; apiKey: string }
   | { type: 'setMdblistKey'; mdblistKey: string }
   | { type: 'setTraktKey'; traktKey: string }
+  | { type: 'setTmdbKey'; tmdbKey: string }
+  | { type: 'setExplore'; explore: Partial<ExploreFilters> }
   | { type: 'setComments'; imdbID: string; comments: number | null; count: number }
   | { type: 'setWeights'; weights: Weights }
   | { type: 'setVoteConfidence'; enabled: boolean }
@@ -70,6 +87,8 @@ const initialState: AppState = {
   apiKey: ENV_API_KEY,
   mdblistKey: ENV_MDBLIST_KEY,
   traktKey: ENV_TRAKT_KEY,
+  tmdbKey: ENV_TMDB_KEY,
+  explore: { ...DEFAULT_EXPLORE, region: deviceRegion() },
   settings: DEFAULT_SETTINGS,
   candidates: [],
   compareIds: [],
@@ -92,6 +111,8 @@ function reducer(state: AppState, action: Action): AppState {
         apiKey: saved.apiKey || ENV_API_KEY,
         mdblistKey: saved.mdblistKey || ENV_MDBLIST_KEY,
         traktKey: saved.traktKey || ENV_TRAKT_KEY,
+        tmdbKey: saved.tmdbKey || ENV_TMDB_KEY,
+        explore: sanitizeExplore(saved.explore, deviceRegion()),
         settings: {
           ...DEFAULT_SETTINGS,
           ...saved.settings,
@@ -120,6 +141,10 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, mdblistKey: action.mdblistKey.trim() };
     case 'setTraktKey':
       return { ...state, traktKey: action.traktKey.trim() };
+    case 'setTmdbKey':
+      return { ...state, tmdbKey: action.tmdbKey.trim() };
+    case 'setExplore':
+      return { ...state, explore: { ...state.explore, ...action.explore } };
     case 'setComments':
       return {
         ...state,

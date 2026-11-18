@@ -33,9 +33,9 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Icon sf={{ default: 'scalemass', selected: 'scalemass.fill' }} md="balance" />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="settings">
-        <NativeTabs.Trigger.Label>Ajustes</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'slider.horizontal.3', selected: 'slider.horizontal.3' }} md="tune" />
+      <NativeTabs.Trigger name="explore">
+        <NativeTabs.Trigger.Label>Explorar</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'safari', selected: 'safari.fill' }} md="explore" />
       </NativeTabs.Trigger>
     </NativeTabs>
   );

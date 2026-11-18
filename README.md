@@ -17,7 +17,8 @@ Hecha con Expo SDK 58 (React Native 0.88, Expo Router, TypeScript).
 - **Ficha**: portada a pantalla completa, el **tráiler** (se abre dentro de la app; viene de MDBList, y si no hay, un atajo para buscarlo en YouTube), las notas, la sinopsis en español (resumen de Wikipedia; si no hay artículo, la original en inglés), el desglose del CineScore, si la crítica y el público coinciden o no, la sinopsis, el reparto y enlaces a IMDb y Rotten Tomatoes.
 
 El diseño usa una paleta inspirada en los teatros de Broadway (escenario negro, texto marfil, un único acento dorado y el rojo del telón) definida en [`src/constants/theme.ts`](src/constants/theme.ts).
-- **Ajustes**: cuánto pesa cada fuente (con presets como “Manda la crítica” o “Manda el público”), el bonus por premios, la corrección por número de votos y tus claves de OMDb y MDBList.
+- **Explorar**: para cuando no sabes qué ver. Eliges plataforma (Netflix, Disney+, Max, Prime Video…) y país, y filtras su catálogo por **IMDb 8+**, **crítica de RT 80%+**, **ganadoras del Óscar** y **año o década**. Cada póster muestra sus notas y Óscar; con **+** lo añades a tu lista. Necesita la clave gratuita de TMDB (y la de MDBList para los filtros de calidad).
+- **Ajustes** (botón ⚙️ arriba en Buscar y Explorar): cuánto pesa cada fuente (con presets como “Manda la crítica” o “Manda el público”), el bonus por premios, la corrección por número de votos y tus claves de OMDb y MDBList.
 
 ## Cómo se calcula el CineScore
 
@@ -49,6 +50,7 @@ IMDb y Rotten Tomatoes no ofrecen una API pública gratuita, así que CineRank c
 | [Wikidata](https://www.wikidata.org) | Traduce títulos en español a su ID de IMDb | No necesita |
 | [Wikipedia en español](https://es.wikipedia.org) | Sinopsis en español (resumen del artículo, licencia CC BY-SA; la ficha enlaza al artículo) | No necesita |
 | Tienda de Apple (ranking público de películas, México) | Carátula de estrenos del buscador | No necesita |
+| [TMDB](https://www.themoviedb.org) | Catálogo de cada plataforma por país para Explorar (plataformas de JustWatch), con títulos y pósters en español | Opcional, gratis |
 | [Trakt](https://trakt.tv) | Nota de quienes comentan (🗣), ponderada por «me gusta» | Opcional, gratis (Client ID) |
 
 ### OMDb
@@ -68,6 +70,14 @@ OMDb no trae el Popcornmeter, así que se obtiene de MDBList:
    Otra opción es rellenar `EXPO_PUBLIC_MDBLIST_API_KEY` en `.env.local`.
 
 Sin esta clave la app funciona igual: el peso del público de RT se reparte entre IMDb y la crítica, y el Ranking muestra un aviso.
+
+### TMDB (catálogo de Explorar)
+
+1. Crea una cuenta gratis en <https://www.themoviedb.org>.
+2. En tu perfil → **Ajustes → API** (<https://www.themoviedb.org/settings/api>) solicita una clave para uso personal.
+3. Copia la **Clave de la API** (o el **Token de acceso de lectura**) y pégala en **Ajustes → Clave de TMDB → Guardar y probar**, o en `EXPO_PUBLIC_TMDB_API_KEY` dentro de `.env.local`.
+
+Explorar recorre el catálogo de TMDB página a página (20 títulos por página) y consulta en MDBList las notas y los Óscar de cada título; con filtros de calidad pide primero los mejor valorados. Las notas se guardan 7 días. CineRank usa la API de TMDB, pero TMDB no la respalda ni certifica.
 
 ### Trakt (comentarios 🗣)
 
@@ -131,7 +141,8 @@ src/
     (tabs)/index.tsx     Buscar
     (tabs)/ranking.tsx   Ranking y tabla comparativa
     (tabs)/compare.tsx   ¿Cuál es mejor? (títulos marcados, cara a cara)
-    (tabs)/settings.tsx  Ajustes
+    (tabs)/explore.tsx   Explorar (catálogo por plataforma con filtros)
+    settings.tsx         Ajustes (se abre con ⚙️)
     movie/[id].tsx       Ficha de un título
   components/          Tarjetas, barras de puntuación, tabla, pestañas
   lib/

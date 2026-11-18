@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, TextInput, useWindowDimension
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/icon';
+import { SettingsButton } from '@/components/explore-parts';
 import { LIST_BAR_SPACE, ListBar } from '@/components/list-bar';
 import { Logo } from '@/components/logo';
 import { ReleaseWall } from '@/components/release-wall';
@@ -170,6 +171,10 @@ export default function SearchScreen() {
             {missingKey}
           </View>
         </View>
+        {/* Ajustes ya no es una pestaña: se abre desde aquí y desde Explorar. */}
+        <View style={[styles.settings, { top: insets.top + Spacing.three }]}>
+          <SettingsButton />
+        </View>
       </View>
     );
   }
@@ -267,6 +272,7 @@ function SkeletonRow() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Palette.background },
+  settings: { position: 'absolute', right: Spacing.four },
   idleContent: { flex: 1, paddingHorizontal: Spacing.four },
   idle: { flex: 1, width: '100%', maxWidth: 520, alignSelf: 'center', justifyContent: 'center', gap: Spacing.four },
   searchBox: {

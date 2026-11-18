@@ -47,6 +47,7 @@ export default function RootLayout() {
           }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="movie/[id]" options={{ title: 'Ficha', headerBackTitle: 'Volver' }} />
+          <Stack.Screen name="settings" options={{ title: 'Ajustes', headerBackTitle: 'Volver' }} />
         </Stack>
       </ThemeProvider>
     </AppProvider>

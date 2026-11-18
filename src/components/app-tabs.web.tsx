@@ -28,8 +28,8 @@ export default function AppTabs() {
           <TabTrigger name="compare" href="/compare" asChild>
             <TabButton icon="scale" label="¿Cuál es mejor?" />
           </TabTrigger>
-          <TabTrigger name="settings" href="/settings" asChild>
-            <TabButton icon="settings" label="Ajustes" />
+          <TabTrigger name="explore" href="/explore" asChild>
+            <TabButton icon="explore" label="Explorar" />
           </TabTrigger>
         </View>
       </TabList>

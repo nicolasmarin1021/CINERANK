@@ -9,6 +9,7 @@ import { SourceDot } from '@/components/scores';
 import { Palette, Radius, Spacing, TierColor } from '@/constants/theme';
 import { MDBLIST_SIGNUP_URL, testMdblistKey } from '@/lib/mdblist';
 import { OMDB_SIGNUP_URL, testApiKey } from '@/lib/omdb';
+import { TMDB_SIGNUP_URL, testTmdbKey } from '@/lib/tmdb';
 import { TRAKT_APPS_URL, testTraktKey } from '@/lib/trakt';
 import { AWARDS_BONUS_LEVELS, weightShares, type TierKey } from '@/lib/ranking';
 import { SOURCE_AUDIENCE, SOURCE_LABEL, type SourceKey, type Weights } from '@/lib/types';
@@ -66,6 +67,11 @@ async function testMdblist(key: string): Promise<KeyTestDetail> {
   };
 }
 
+async function testTmdb(key: string): Promise<KeyTestDetail> {
+  const n = await testTmdbKey(key);
+  return { message: `Clave válida: TMDB conoce ${n} plataformas en México. Ya puedes usar Explorar.` };
+}
+
 async function testTrakt(key: string): Promise<KeyTestDetail> {
   const r = await testTraktKey(key);
   if (r.score != null) {
@@ -95,8 +101,8 @@ export default function SettingsScreen() {
   const presetActive = (w: Weights) => SOURCES.every((s) => w[s] === settings.weights[s]);
 
   return (
-    <Screen>
-      <AppText variant="display">Ajustes</AppText>
+    // Pantalla fuera de las pestañas: se abre con el botón ⚙️ de Buscar y Explorar (título en la cabecera).
+    <Screen withTabBar={false}>
 
       <ApiKeyCard
         title="Clave de OMDb"
@@ -130,6 +136,18 @@ export default function SettingsScreen() {
         accessibilityLabel="Client ID de Trakt"
         test={testTrakt}
         onSave={(traktKey) => dispatch({ type: 'setTraktKey', traktKey })}
+        optional
+      />
+
+      <ApiKeyCard
+        title="Clave de TMDB"
+        caption="Opcional · catálogo de Explorar"
+        description="TMDB tiene el catálogo de cada plataforma por país. Crea una cuenta gratis en themoviedb.org, entra en tu perfil → Ajustes → API, solicita una clave para uso personal y pega aquí la «Clave de la API» (o el «Token de acceso de lectura»)."
+        savedKey={state.tmdbKey}
+        signupUrl={TMDB_SIGNUP_URL}
+        accessibilityLabel="Clave de TMDB"
+        test={testTmdb}
+        onSave={(tmdbKey) => dispatch({ type: 'setTmdbKey', tmdbKey })}
         optional
       />
 
@@ -271,7 +289,7 @@ export default function SettingsScreen() {
 
       <Notice icon="info">
         {
-          'Datos de OMDb API, MDBList y Trakt; los títulos en español se resuelven con Wikidata. CineRank usa Trakt, pero Trakt no la respalda ni certifica. IMDb y Rotten Tomatoes son marcas de sus respectivos dueños; CineRank no está afiliada a ellas. Las notas se guardan en caché 3 días para ahorrar consultas.'
+          'Datos de OMDb API, MDBList y Trakt; los títulos en español se resuelven con Wikidata. CineRank usa Trakt, pero Trakt no la respalda ni certifica. Catálogo de Explorar: TMDB, con plataformas de JustWatch; CineRank usa la API de TMDB, pero TMDB no la respalda ni certifica. IMDb y Rotten Tomatoes son marcas de sus respectivos dueños; CineRank no está afiliada a ellas. Las notas se guardan en caché 3 días para ahorrar consultas.'
         }
       </Notice>
     </Screen>
